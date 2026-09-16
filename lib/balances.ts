@@ -2,9 +2,14 @@ import { erc20Abi, type Address } from "viem";
 import { getClient } from "./chains";
 import type { ChainId } from "./protocols/types";
 
-export const WETH: Record<ChainId, Address> = {
+/** Wrapped native token per chain (WETH, WPOL, WAVAX). A wallet's native balance counts toward this market. */
+export const WNATIVE: Record<ChainId, Address> = {
   1: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
   8453: "0x4200000000000000000000000000000000000006",
+  42161: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+  10: "0x4200000000000000000000000000000000000006",
+  137: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+  43114: "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
 };
 
 /**

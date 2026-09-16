@@ -4,6 +4,7 @@ import { FinalCta } from "@/components/site/FinalCta";
 import { Hero } from "@/components/site/Hero";
 import { ProtocolConstellation } from "@/components/site/ProtocolConstellation";
 import { TrustRow } from "@/components/site/TrustRow";
+import { CHAIN_IDS } from "@/lib/chains";
 import { marketsSnapshot } from "@/lib/snapshot";
 
 // Stats come from the same adapters the app uses; refreshed hourly, never per visit.
@@ -11,7 +12,7 @@ export const revalidate = 3600;
 
 async function stats() {
   try {
-    const snap = await marketsSnapshot([1, 8453]);
+    const snap = await marketsSnapshot(CHAIN_IDS);
     let markets = 0;
     let liquidityUsd = 0;
     for (const p of snap.protocols) {

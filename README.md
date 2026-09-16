@@ -1,8 +1,8 @@
 # Borrow Router
 
-Read-only comparison of crypto-backed USDC borrowing across Aave v3, Spark, Compound v3 and Morpho Blue on Ethereum and Base. Paste an address, see what it could borrow on each protocol, at what rate, and where it would be liquidated. Existing positions are shown with the protocol's own health factor.
+Read-only comparison of crypto-backed USDC borrowing across Aave v3, Spark, Compound v3, Morpho Blue, Fluid, Euler v2 and Moonwell on Ethereum, Base, Arbitrum, Optimism, Polygon and Avalanche. Paste an address, see what it could borrow on each protocol, at what rate, and where it would be liquidated. Existing positions are shown with the protocol's own health factor.
 
-Non-custodial by construction: there is no wallet connection, no signing, no write path. Every number comes from the protocol's own contracts (or, for Morpho market discovery, its public API) via server-side RPC.
+Non-custodial by construction: there is no wallet connection, no signing, no write path. Every number comes from the protocol's own contracts (or, for Morpho and Euler market discovery, their public APIs) via server-side RPC.
 
 ## Run
 

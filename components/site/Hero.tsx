@@ -85,14 +85,14 @@ export function Hero({ stats }: { stats: Stats }) {
           <Mark className="mark" />
           <h1>Every crypto-backed loan, side by side.</h1>
           <p className="sub">
-            Paste an address. See what it could borrow on Aave, Spark, Compound and Morpho — at what rate, and where it gets liquidated.
+            Paste an address. See what it could borrow on Aave, Spark, Compound, Morpho, Fluid, Euler and Moonwell — at what rate, and where it gets liquidated.
           </p>
           <AddressInput id="hero-address" note="Read-only. No wallet connection, no signing." />
         </div>
         <div className="hero-bottom" ref={bottom}>
           <div className="stats" aria-label="Coverage">
-            <div className="stat"><span className="label">Protocols</span><span className="value"><CountUp value={4} /></span></div>
-            <div className="stat"><span className="label">Networks</span><span className="value"><CountUp value={2} /></span></div>
+            <div className="stat"><span className="label">Protocols</span><span className="value"><CountUp value={7} /></span></div>
+            <div className="stat"><span className="label">Networks</span><span className="value"><CountUp value={6} /></span></div>
             <div className="stat"><span className="label">Markets indexed</span><span className="value"><CountUp value={stats.markets} /></span></div>
             <div className="stat">
               <span className="label">Liquidity compared</span>

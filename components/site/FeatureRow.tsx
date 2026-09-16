@@ -4,8 +4,8 @@ const ROWS = [
   {
     id: "how-it-works",
     title: "See your borrowing power everywhere at once",
-    body: "One address, four protocols, two networks. Max borrow, current rate, and utilization for each, ranked.",
-    tiles: ["AAVE", "SPK", "COMP", "MRPH"],
+    body: "One address, seven protocols, six networks. Max borrow, current rate, and utilization for each, ranked.",
+    tiles: ["AAVE", "SPK", "COMP", "MRPH", "FLUID", "EUL", "WELL"],
   },
   {
     id: "liquidation",
@@ -17,7 +17,7 @@ const ROWS = [
     id: "networks",
     title: "Read positions you already hold",
     body: "Open positions appear with each protocol's own health factor, unmodified — not a normalized score we invented.",
-    tiles: ["ETH", "BASE"],
+    tiles: ["ETH", "BASE", "ARB", "OP", "POL", "AVAX"],
   },
 ];
 
@@ -28,7 +28,7 @@ export function FeatureRows() {
       <div className="wrap">
         <div className="section-head" data-reveal>
           <span className="eyebrow">Built for comparison</span>
-          <h2 id="features">Four lenders, one set of numbers, no wallet required.</h2>
+          <h2 id="features">Seven lenders, one set of numbers, no wallet required.</h2>
         </div>
         <div className="features">
           {ROWS.map((r, i) => (

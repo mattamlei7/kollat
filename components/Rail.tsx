@@ -12,7 +12,7 @@ import {
   type RiskBand,
 } from "@/lib/math/health";
 import { BandChip, HealthFactor, bandLabel, hueClass } from "./Risk";
-import { Def, Icon, Segmented, tone } from "./ui";
+import { Def, Icon, tone } from "./ui";
 
 /** Which (chain, holding, protocol) the rail is simulating. */
 export interface Selection {
@@ -157,17 +157,17 @@ function Simulator({ sim, hint, positions, frac, onFrac, onSelect, onView }: Rai
         </p>
       </div>
 
-      {/* Protocol segmented control + asset dropdown. */}
+      {/* Protocol + asset dropdowns (seven protocols no longer fit a segmented control in the rail). */}
       <div className="flex flex-col gap-2">
-        <div className="overflow-x-auto">
-          <Segmented
-            label="Protocol"
-            small
-            options={sim.cols.map((c) => ({ value: c.key, label: c.name }))}
-            value={sim.col.key}
-            onChange={(colKey) => onSelect({ chainId: sim.table.chainId, rowKey: rowKeyOf(sim.row), colKey })}
-          />
-        </div>
+        <label className="sr-only" htmlFor="sim-protocol">Protocol</label>
+        <select
+          id="sim-protocol"
+          className="ctl w-full"
+          value={sim.col.key}
+          onChange={(e) => onSelect({ chainId: sim.table.chainId, rowKey: rowKeyOf(sim.row), colKey: e.target.value })}
+        >
+          {sim.cols.map((c) => <option key={c.key} value={c.key}>{c.name}</option>)}
+        </select>
         <label className="sr-only" htmlFor="sim-asset">Collateral</label>
         <select
           id="sim-asset"

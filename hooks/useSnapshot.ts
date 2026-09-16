@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AccountJson, MarketsJson } from "@/lib/client-types";
 
-export type ChainParam = "1" | "8453" | "all";
+import type { ChainParam } from "@/lib/client-types";
+export type { ChainParam };
 
 interface State<T> {
   data: T | null;

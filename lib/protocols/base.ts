@@ -1,6 +1,6 @@
 import { formatUnits, isAddress, type Address } from "viem";
 import { cachedResult, TTL } from "../cache";
-import { getTokenBalances, WETH } from "../balances";
+import { getTokenBalances, WNATIVE } from "../balances";
 import { liquidationPriceSingle } from "../math/health";
 import {
   fail,
@@ -69,7 +69,7 @@ export abstract class BaseLendingProtocol implements LendingProtocol {
   protected async computeCapacity(address: Address, markets: Market[]): Promise<BorrowCapacity[]> {
     const tokens = markets.map((m) => m.collateral.address);
     const { erc20, native } = await getTokenBalances(this.chainId, address, tokens);
-    const weth = WETH[this.chainId].toLowerCase();
+    const weth = WNATIVE[this.chainId].toLowerCase();
     return markets.map((m) => {
       const key = m.collateral.address.toLowerCase();
       const isWeth = key === weth;

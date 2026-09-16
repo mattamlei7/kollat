@@ -110,9 +110,12 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
                   <th scope="col">Spark</th>
                   <th scope="col">Compound v3</th>
                   <th scope="col">Morpho</th>
+                  <th scope="col">Fluid</th>
+                  <th scope="col">Euler</th>
+                  <th scope="col">Moonwell</th>
                 </tr>
               </thead>
-              <SkeletonRows cols={7} />
+              <SkeletonRows cols={10} />
             </table>
           </div>
         )}

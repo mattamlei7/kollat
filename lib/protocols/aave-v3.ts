@@ -3,6 +3,7 @@ import { IUiPoolDataProvider_ABI } from "@bgd-labs/aave-address-book/abis";
 import { getClient } from "../chains";
 import { aprToApy, healthFactor, liquidationPrice, uniformDrawdown, type CollateralLeg } from "../math/health";
 import { POOL_ABI, PROTOCOL_DATA_PROVIDER_ABI, UI_POOL_DATA_PROVIDER_V33_ABI } from "./abis/aave";
+import { BRIDGED_USDC } from "./addresses";
 import { BaseLendingProtocol } from "./base";
 import type { ChainId, Market, MarketStatus, Position, PositionLeg, ProtocolId, Rate, Token } from "./types";
 
@@ -20,8 +21,8 @@ export interface AaveV3Config {
   protocolDataProvider: Address;
   /** v3.3 = current Aave deployments; v3.0 = Spark (stable-rate fields still in the struct). */
   uiProviderVariant: "v3.3" | "v3.0";
-  /** Symbols accepted as the debt asset. */
-  debtSymbols: string[];
+  /** Reserve addresses accepted as the debt asset (matched by address: bridged and native USDC share the symbol "USDC" on some chains). */
+  debtTokens: Address[];
 }
 
 interface ReserveRow {
@@ -131,7 +132,8 @@ export class AaveV3Adapter extends BaseLendingProtocol {
   }
 
   private token(r: ReserveRow): Token {
-    return { chainId: this.chainId, address: r.underlyingAsset, symbol: r.symbol, decimals: r.decimals };
+    const bridged = BRIDGED_USDC[this.chainId]?.toLowerCase() === r.underlyingAsset.toLowerCase();
+    return { chainId: this.chainId, address: r.underlyingAsset, symbol: bridged ? "USDC.e" : r.symbol, decimals: r.decimals };
   }
 
   private marketId(collateral: string, debt: string) {
@@ -143,8 +145,9 @@ export class AaveV3Adapter extends BaseLendingProtocol {
   protected async fetchMarkets(): Promise<Market[]> {
     const reserves = await this.readReserves();
     const now = Date.now();
-    const debts = reserves.filter((r) => this.cfg.debtSymbols.includes(r.symbol) && r.isActive);
-    const collaterals = reserves.filter((r) => r.isActive && !this.cfg.debtSymbols.includes(r.symbol));
+    const isDebt = (r: ReserveRow) => this.cfg.debtTokens.some((a) => a.toLowerCase() === r.underlyingAsset.toLowerCase());
+    const debts = reserves.filter((r) => isDebt(r) && r.isActive);
+    const collaterals = reserves.filter((r) => r.isActive && !isDebt(r));
 
     const markets: Market[] = [];
     for (const d of debts) {

@@ -25,6 +25,12 @@ const CHIPS: { s: string; c: string; x: number; y: number; k: number; dur: numbe
   { s: "LINK", c: "#2a5ada", x: 64, y: 78, k: 0.6, dur: 8 },
   { s: "sDAI", c: "#54b29b", x: 46, y: 4, k: 0.8, dur: 10 },
   { s: "tBTC", c: "#3e3e3e", x: 92, y: 84, k: 1.1, dur: 12 },
+  { s: "FLUID", c: "#3b82f6", x: 6, y: 92, k: 0.9, dur: 10 },
+  { s: "EUL", c: "#ff3b6b", x: 86, y: 4, k: 1.2, dur: 9 },
+  { s: "WELL", c: "#00c48c", x: 2, y: 84, k: 0.7, dur: 11 },
+  { s: "ARB", c: "#12aaff", x: 78, y: 56, k: 1.0, dur: 12 },
+  { s: "OP", c: "#ff0420", x: 12, y: 50, k: 1.1, dur: 8 },
+  { s: "AVAX", c: "#e84142", x: 44, y: 98, k: 0.8, dur: 10 },
 ];
 
 /** "Powered by" — floats over the starfield reached after the fly-through. */

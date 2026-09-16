@@ -9,7 +9,7 @@ const interTight = Inter_Tight({ variable: "--font-inter-tight", subsets: ["lati
 export const metadata: Metadata = {
   title: "Borrow Router",
   description:
-    "Read-only DeFi borrow router: what an address can borrow against its holdings on Aave, Spark, Compound and Morpho, at what rate, and where it gets liquidated.",
+    "Read-only DeFi borrow router: what an address can borrow against its holdings on Aave, Spark, Compound, Morpho, Fluid, Euler and Moonwell, at what rate, and where it gets liquidated.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

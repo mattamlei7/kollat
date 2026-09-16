@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CHAIN_LABEL } from "@/lib/client-types";
+import { CHAIN_LABEL, NATIVE_SYMBOL } from "@/lib/client-types";
 import { amount, pct, usd } from "@/lib/format";
 import type { ChainTable } from "@/lib/join";
 import { rowKeyOf, type Selection } from "./Rail";
@@ -81,7 +81,7 @@ export function CapacityTable({ table, showChain, selection, tone, onSelect, onR
                       <span className="lines">
                         <span>{r.holding.token.symbol}</span>
                         <span className="sub">
-                          {r.holding.nativeIncluded && r.holding.nativeIncluded !== "0" ? "incl. ETH · wrap to use" : usd(r.holding.priceUsd, { cents: true })}
+                          {r.holding.nativeIncluded && r.holding.nativeIncluded !== "0" ? `incl. ${NATIVE_SYMBOL[table.chainId] ?? "ETH"} · wrap to use` : usd(r.holding.priceUsd, { cents: true })}
                         </span>
                       </span>
                     </span>

@@ -2,7 +2,7 @@
  * Prints every adapter's output for an address so numbers can be checked
  * against the protocol front-ends.
  *
- *   npx tsx scripts/verify.ts 0xabc… [--chain 1|8453] [--protocol aave-v3]
+ *   npx tsx scripts/verify.ts 0xabc… [--chain 1|8453|42161|10|137|43114] [--protocol aave-v3]
  */
 import { formatUnits, isAddress, type Address } from "viem";
 import { PROTOCOLS } from "../lib/protocols/registry";

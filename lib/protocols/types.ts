@@ -15,8 +15,8 @@ import type { Address } from "viem";
  * that could build or sign a transaction.
  */
 
-export type ChainId = 1 | 8453;
-export type ProtocolId = "aave-v3" | "spark" | "compound-v3" | "morpho-blue";
+export type ChainId = 1 | 8453 | 42161 | 10 | 137 | 43114;
+export type ProtocolId = "aave-v3" | "spark" | "compound-v3" | "morpho-blue" | "fluid" | "euler-v2" | "moonwell";
 
 export interface Token {
   chainId: ChainId;

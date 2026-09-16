@@ -96,7 +96,7 @@ export class MorphoBlueAdapter extends BaseLendingProtocol {
     const chosen = this.pickPerCollateral(await this.apiMarkets());
     if (chosen.length === 0) return [];
     const client = getClient(this.chainId);
-    const morpho = { address: MORPHO_BLUE, abi: MORPHO_ABI } as const;
+    const morpho = { address: MORPHO_BLUE[this.chainId]!, abi: MORPHO_ABI } as const;
 
     const [params, states] = await Promise.all([
       client.multicall({
@@ -169,7 +169,7 @@ export class MorphoBlueAdapter extends BaseLendingProtocol {
   protected async fetchPositions(address: Address, markets: Market[]): Promise<Position[]> {
     if (markets.length === 0) return [];
     const client = getClient(this.chainId);
-    const morpho = { address: MORPHO_BLUE, abi: MORPHO_ABI } as const;
+    const morpho = { address: MORPHO_BLUE[this.chainId]!, abi: MORPHO_ABI } as const;
     const ids = markets.map((m) => this.idOf(m));
     const [positions, states] = await Promise.all([
       client.multicall({

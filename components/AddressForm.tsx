@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import type { ChainParam } from "@/hooks/useSnapshot";
-import { Icon, Segmented } from "./ui";
+import { Icon } from "./ui";
 
 interface Props {
   initial: string;
@@ -17,6 +17,10 @@ const CHAINS: { value: ChainParam; label: string }[] = [
   { value: "all", label: "All" },
   { value: "1", label: "Ethereum" },
   { value: "8453", label: "Base" },
+  { value: "42161", label: "Arbitrum" },
+  { value: "10", label: "Optimism" },
+  { value: "137", label: "Polygon" },
+  { value: "43114", label: "Avalanche" },
 ];
 
 /** Address or ENS input styled as the top-bar search pill. Submits on Enter only. */
@@ -70,7 +74,10 @@ export function AddressForm({ initial, chain, onSubmit, onChain, error, busy }: 
           className="num"
         />
       </div>
-      <Segmented options={CHAINS} value={chain} onChange={onChain} label="Chain" small />
+      <label className="sr-only" htmlFor="chain-select">Chain</label>
+      <select id="chain-select" className="ctl" value={chain} onChange={(e) => onChain(e.target.value as ChainParam)}>
+        {CHAINS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+      </select>
       <button type="submit" disabled={busy} className="btn btn-primary">
         {busy ? "Reading…" : "Read"}
       </button>
