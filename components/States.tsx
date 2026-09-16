@@ -10,11 +10,11 @@ export function EmptyState({
   action?: { label: string; onClick: () => void };
 }) {
   return (
-    <div className="px-[var(--gutter)] py-10 max-w-[60ch]">
-      <h2 className="text-[22px] font-medium leading-tight">{title}</h2>
-      <p className="mt-2 text-t2">{body}</p>
+    <div className="px-[var(--gutter)] py-12 max-w-[52ch]">
+      <h2 className="display-sm text-balance">{title}</h2>
+      <p className="mt-3 body text-t2">{body}</p>
       {action && (
-        <button type="button" onClick={action.onClick} className="btn btn-primary mt-5">
+        <button type="button" onClick={action.onClick} className="btn btn-primary mt-6">
           {action.label}
         </button>
       )}
@@ -26,7 +26,7 @@ export function EmptyState({
 export function ErrorLine({ name, message, retryable }: { name: string; message: string; retryable?: boolean }) {
   return (
     <p className="text-t2">
-      <span className="font-medium text-t1">{name}</span> unavailable — {shorten(message)}
+      <span className="font-semibold text-t1">{name}</span> unavailable — {shorten(message)}
       {retryable ? ". Retrying on the next refresh." : "."}
     </p>
   );
@@ -48,7 +48,14 @@ export function SkeletonRows({ cols, rows = 4 }: { cols: number; rows?: number }
         <tr key={r}>
           {Array.from({ length: cols }, (_, c) => (
             <td key={c}>
-              <span className="skel" style={{ width: c === 0 ? 56 : 72 }} />
+              {c === 0 ? (
+                <span className="name-cell">
+                  <span className="avatar" />
+                  <span className="skel" style={{ width: 56 }} />
+                </span>
+              ) : (
+                <span className="skel" style={{ width: 72 }} />
+              )}
             </td>
           ))}
         </tr>

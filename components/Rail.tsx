@@ -1,6 +1,6 @@
 "use client";
 
-import { CHAIN_LABEL } from "@/lib/client-types";
+import { CHAIN_LABEL, PROTOCOL_URL } from "@/lib/client-types";
 import { amount as fmtAmount, pct, signedPct, timeAgo, usd } from "@/lib/format";
 import type { Cell, ChainTable, Column, PositionView, Row } from "@/lib/join";
 import {
@@ -12,7 +12,7 @@ import {
   type RiskBand,
 } from "@/lib/math/health";
 import { BandChip, HealthFactor, bandLabel, hueClass } from "./Risk";
-import { Def, Segmented, tone } from "./ui";
+import { Def, Icon, Segmented, tone } from "./ui";
 
 /** Which (chain, holding, protocol) the rail is simulating. */
 export interface Selection {
@@ -123,125 +123,154 @@ function Simulator({ sim, hint, positions, frac, onFrac, onSelect, onView }: Rai
   const t = tone(band);
   const sym = sim?.row.holding.token.symbol;
 
-  return (
-    <div className="rail-view">
-      <div className="px-8 pt-6 pb-5 hair-b">
-        <div className="flex items-baseline justify-between">
-          <h2 className="font-medium text-t2">
-            <Def term="hf">Health factor</Def>
-          </h2>
-          {sim && (
-            <button type="button" className="btn btn-text" onClick={() => onView("params")}>
-              {sim.col.name} parameters ›
-            </button>
-          )}
+  if (!sim) {
+    return (
+      <div className="rail-view flex flex-col gap-4">
+        <h2 className="display-sm text-balance">Simulate a borrow</h2>
+        <p className="body text-t2">{hint}</p>
+        <div className="mt-2 flex items-center gap-3">
+          <span className="text-t2">Health factor</span>
+          <HealthFactor value={null} size="lg" />
         </div>
-        <div className="mt-2 flex items-center gap-3 flex-wrap">
-          <HealthFactor value={sim ? sim.hf : null} size="hero" />
+      </div>
+    );
+  }
+
+  const drop = pct(Math.max(0, -sim.dist), 1);
+
+  return (
+    <div className="rail-view flex flex-col gap-6">
+      {/* Health factor: the price block. */}
+      <div>
+        <div className="flex items-center justify-between">
+          <span className="text-t2"><Def term="hf">Health factor</Def></span>
           <BandChip band={band} />
         </div>
-        <p className="sr-only" aria-live="polite" aria-atomic="true">
-          {sim ? `Health factor ${sim.hf === Infinity ? "no debt" : sim.hf.toFixed(2)}, ${bandLabel(band)}` : ""}
+        <div className="mt-1">
+          <HealthFactor value={sim.hf} size="hero" />
+        </div>
+        <p className={`mt-1 body ${sim.liq > 0 ? hueClass(band) : "text-t2"}`}>
+          {sim.liq > 0 ? `↘ ${drop} in ${sym} to liquidation` : "No debt at this amount"}
         </p>
-        {!sim && <p className="mt-3 text-t2 max-w-[38ch]">{hint}</p>}
+        <p className="sr-only" aria-live="polite" aria-atomic="true">
+          Health factor {sim.hf === Infinity ? "no debt" : sim.hf.toFixed(2)}, {bandLabel(band)}
+        </p>
       </div>
 
-      {sim && (
-        <>
-          <div className="px-8 py-5 hair-b">
-            <div className="flex items-center gap-3 flex-wrap">
-              <label className="text-t2" htmlFor="sim-asset">Against</label>
-              <select
-                id="sim-asset"
-                className="ctl"
-                value={`${sim.table.chainId}:${rowKeyOf(sim.row)}`}
-                onChange={(e) => {
-                  const [chainId, rowKey] = e.target.value.split(":");
-                  onSelect({ chainId: Number(chainId), rowKey, colKey: sim.col.key });
-                }}
-              >
-                {[sim.table].map((table) =>
-                  table.rows
-                    .filter((r) => capacityCols(table, r).length)
-                    .map((r) => (
-                      <option key={rowKeyOf(r)} value={`${table.chainId}:${rowKeyOf(r)}`}>
-                        {fmtAmount(r.holding.units)} {r.holding.token.symbol} · {usd(r.holding.usd)}
-                      </option>
-                    )),
-                )}
-              </select>
-            </div>
-            <div className="mt-3 flex items-center gap-3 flex-wrap">
-              <span className="text-t2">On</span>
-              <Segmented
-                label="Protocol"
-                tone={t}
-                options={sim.cols.map((c) => ({ value: c.key, label: c.name }))}
-                value={sim.col.key}
-                onChange={(colKey) => onSelect({ chainId: sim.table.chainId, rowKey: rowKeyOf(sim.row), colKey })}
-              />
-            </div>
-          </div>
+      {/* Protocol segmented control + asset dropdown. */}
+      <div className="flex flex-col gap-2">
+        <div className="overflow-x-auto">
+          <Segmented
+            label="Protocol"
+            small
+            options={sim.cols.map((c) => ({ value: c.key, label: c.name }))}
+            value={sim.col.key}
+            onChange={(colKey) => onSelect({ chainId: sim.table.chainId, rowKey: rowKeyOf(sim.row), colKey })}
+          />
+        </div>
+        <label className="sr-only" htmlFor="sim-asset">Collateral</label>
+        <select
+          id="sim-asset"
+          className="ctl w-full"
+          value={`${sim.table.chainId}:${rowKeyOf(sim.row)}`}
+          onChange={(e) => {
+            const [chainId, rowKey] = e.target.value.split(":");
+            onSelect({ chainId: Number(chainId), rowKey, colKey: sim.col.key });
+          }}
+        >
+          {sim.table.rows
+            .filter((r) => capacityCols(sim.table, r).length)
+            .map((r) => (
+              <option key={rowKeyOf(r)} value={`${sim.table.chainId}:${rowKeyOf(r)}`}>
+                {fmtAmount(r.holding.units)} {r.holding.token.symbol} · {usd(r.holding.usd)}
+              </option>
+            ))}
+        </select>
+      </div>
 
-          <div className="px-8 py-5 hair-b">
-            <div className="flex items-center justify-between gap-3">
-              <label className="text-t2" htmlFor="sim-amount">Borrow USDC</label>
-              <input
-                id="sim-amount"
-                type="number"
-                min={0}
-                max={Math.round(sim.max)}
-                step={100}
-                className="ctl num text-right w-[9.5rem]"
-                value={Math.round(sim.amount)}
-                onChange={(e) => onFrac(clamp(Number(e.target.value) / sim.max))}
-              />
-            </div>
+      {/* Amount entry. */}
+      <div>
+        <label className="sr-only" htmlFor="sim-amount">Borrow amount in USDC</label>
+        <div className="flex items-end justify-between gap-3">
+          <div className="amount">
             <input
-              type="range"
+              id="sim-amount"
+              type="number"
+              inputMode="numeric"
               min={0}
-              max={1000}
-              step={5}
-              value={Math.round(frac * 1000)}
-              aria-label="Borrow amount"
-              aria-valuetext={usd(sim.amount)}
-              onChange={(e) => onFrac(Number(e.target.value) / 1000)}
+              max={Math.round(sim.max)}
+              step={100}
+              className="num"
+              value={Math.round(sim.amount)}
+              onChange={(e) => onFrac(clamp(Number(e.target.value) / sim.max))}
             />
-            <div className="flex justify-between text-t3">
-              <span>0</span>
-              <span>
-                {usd(sim.max)} max · <Def term="ltv" right>{pct(sim.cell.market.ltv, 0)} LTV</Def>
-                {sim.cell.capacity.cappedByLiquidity ? " · capped by the market" : ""}
-              </span>
-            </div>
+            <span className="unit">USDC</span>
           </div>
+          <button type="button" className="btn btn-soft" onClick={() => onFrac(1)}>
+            Max
+          </button>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={1000}
+          step={5}
+          value={Math.round(frac * 1000)}
+          aria-label="Borrow amount"
+          aria-valuetext={usd(sim.amount)}
+          onChange={(e) => onFrac(Number(e.target.value) / 1000)}
+        />
+        <p className="label-strong hue-primary">
+          ⇅ {usd(sim.max)} max at <Def term="ltv" right>{pct(sim.cell.market.ltv, 0)} LTV</Def>
+          {sim.cell.capacity.cappedByLiquidity ? " · capped by the market" : ""}
+        </p>
+      </div>
 
-          <dl className="px-8 py-2 hair-b">
-            <Line label={<Def term="liq">Liquidation price</Def>}>
-              <span className={`font-medium ${hueClass(band)}`}>{sim.liq > 0 ? usd(sim.liq, { cents: true }) : "—"}</span>
-              <span className="sub"> per {sym}</span>
-            </Line>
-            <Line label="Now">
-              {usd(sim.cell.market.collateralPriceUsd, { cents: true })}
-              <span className="sub"> {sim.liq > 0 ? `${signedPct(sim.dist, 1)} to liquidation` : "no debt"}</span>
-            </Line>
-            <Line label={<Def term="lt">Liquidation threshold</Def>}>{pct(sim.cell.market.liquidationThreshold, 1)}</Line>
-          </dl>
+      {/* Summary rows. */}
+      <div>
+        <button type="button" className="summary" onClick={() => onView("params")}>
+          <span className="disc" data-tone={t}><Icon name="shield" /></span>
+          <span className="text">
+            <span className={`title num ${hueClass(band)}`}>
+              <Def term="liq">Liquidation</Def> {sim.liq > 0 ? usd(sim.liq, { cents: true }) : "—"}
+            </span>
+            <span className="subtitle num">
+              {sym} now {usd(sim.cell.market.collateralPriceUsd, { cents: true })}
+              {sim.liq > 0 ? ` · ${signedPct(sim.dist, 1)}` : ""} · LT {pct(sim.cell.market.liquidationThreshold, 1)}
+            </span>
+          </span>
+          <span className="chev"><Icon name="chevron" /></span>
+        </button>
+        <button type="button" className="summary" onClick={() => onView("params")}>
+          <span className="disc"><Icon name="percent" /></span>
+          <span className="text">
+            <span className="title num">
+              {sim.apy === null ? "—" : pct(sim.apy)} <Def term="apy">APY</Def>
+              <span className="text-t2 font-normal"> · {sim.costPerYear === null ? "—" : `${usd(sim.costPerYear)} a year`}</span>
+            </span>
+            <span className="subtitle num">
+              {sim.cheaper ? (
+                <span className="hue-safe">↗ {sim.cheaper.col.name} is {sim.cheaper.bps} bps cheaper · saves {usd(sim.cheaper.saving)} a year</span>
+              ) : (
+                `Cheapest of ${sim.cols.length} protocol${sim.cols.length === 1 ? "" : "s"} for ${sym}`
+              )}
+            </span>
+          </span>
+          <span className="chev"><Icon name="chevron" /></span>
+        </button>
+      </div>
 
-          <dl className="px-8 py-2 hair-b">
-            <Line label={<Def term="apy">Borrow APY</Def>}>{sim.apy === null ? "—" : pct(sim.apy)}</Line>
-            <Line label="Cost per year">{sim.costPerYear === null ? "—" : usd(sim.costPerYear)}</Line>
-            {sim.cheaper && (
-              <Line label={`${sim.cheaper.col.name} instead`}>
-                <span className="font-semibold">−{sim.cheaper.bps} bps</span>
-                <span className="sub"> saves {usd(sim.cheaper.saving)} a year</span>
-              </Line>
-            )}
-          </dl>
+      <a
+        className="btn btn-primary btn-cta"
+        href={PROTOCOL_URL[sim.col.id] ?? "#"}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Open {sim.col.name}
+        <Icon name="external" className="w-5 h-5" />
+      </a>
 
-          <Narrative sim={sim} positions={positions} />
-        </>
-      )}
+      <Narrative sim={sim} positions={positions} />
     </div>
   );
 }
@@ -254,7 +283,7 @@ function Narrative({ sim, positions }: { sim: Sim; positions: PositionView[] | n
   const drop = pct(Math.max(0, -sim.dist), 1);
   const penalty = pct(sim.cell.market.liquidationPenalty, 1);
   return (
-    <div className="px-8 py-5 flex flex-col gap-3">
+    <div className="hair-t pt-5 flex flex-col gap-3 text-t2">
       {sim.band === "liquidatable" && (
         <p className="hue-danger">
           This loan is liquidatable the moment it opens. {sim.col.name} lets you borrow to {pct(sim.cell.market.ltv, 0)} of collateral, and {usd(sim.amount)} is past that.
@@ -266,27 +295,19 @@ function Narrative({ sim, positions }: { sim: Sim; positions: PositionView[] | n
         </p>
       )}
       {sim.band === "watch" && (
-        <p className="text-t2">
+        <p>
           {sym} can fall {drop} before this loan is liquidated. Below a health factor of 1.2 most people top up collateral or repay.
         </p>
       )}
-      {sim.band === "comfortable" && (
-        <p className="text-t2">
-          {sym} can fall {drop} before this loan is liquidated.
-        </p>
-      )}
+      {sim.band === "comfortable" && <p>{sym} can fall {drop} before this loan is liquidated.</p>}
       {sim.cell.market.ltv === sim.cell.market.liquidationThreshold && (
-        <p className="text-t2">
-          On {sim.col.name} the maximum borrow is the liquidation point: there is no buffer between the two.
-        </p>
+        <p>On {sim.col.name} the maximum borrow is the liquidation point: there is no buffer between the two.</p>
       )}
       {existing && (
-        <p className="text-t3">
-          This address already has debt on {sim.col.name}. The figures above treat the loan as a fresh position and do not include it.
-        </p>
+        <p>This address already has debt on {sim.col.name}. The figures above treat the loan as a fresh position and do not include it.</p>
       )}
       <p className="text-t3">
-        Assumes the whole {sym} balance is supplied as collateral. Read-only: nothing here signs or moves funds.
+        Assumes the whole {sym} balance is supplied as collateral. Read-only: nothing here signs or moves funds. Opening a protocol leaves this site.
       </p>
     </div>
   );
@@ -297,15 +318,15 @@ function Params({ sim, onBack }: { sim: Sim; onBack: () => void }) {
   const chain = CHAIN_LABEL[sim.table.chainId] ?? sim.table.chainId;
   return (
     <div className="rail-view">
-      <div className="px-8 h-[52px] flex items-center hair-b relative">
-        <button type="button" className="btn btn-text" onClick={onBack}>
-          ‹ Simulate
+      <div className="h-10 flex items-center relative">
+        <button type="button" className="btn btn-icon btn-ghost" onClick={onBack} aria-label="Back to simulator">
+          <Icon name="back" />
         </button>
-        <h2 className="absolute inset-x-0 text-center font-medium pointer-events-none">
+        <h2 className="absolute inset-x-0 text-center heading pointer-events-none">
           {sim.col.name} · {market.collateral.symbol}
         </h2>
       </div>
-      <dl className="px-8 py-2">
+      <dl className="mt-4">
         <Line label="Chain">{chain}</Line>
         <Line label="Market">{market.collateral.symbol} → {market.debt.symbol}</Line>
         <Line label="Status">{market.status}</Line>
@@ -320,7 +341,7 @@ function Params({ sim, onBack }: { sim: Sim; onBack: () => void }) {
         <Line label="USDC available">{usd(Number(market.availableLiquidity) / 10 ** market.debt.decimals, { compact: true })}</Line>
         <Line label="Last read">{timeAgo(market.fetchedAt)}</Line>
       </dl>
-      <p className="px-8 py-4 text-t3">
+      <p className="mt-4 text-t2">
         Read from {sim.col.name}&apos;s own contracts on {chain}. The oracle price is the one its liquidators see.
       </p>
     </div>
@@ -329,9 +350,9 @@ function Params({ sim, onBack }: { sim: Sim; onBack: () => void }) {
 
 function Line({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 min-h-[36px] py-2">
+    <div className="flex items-baseline justify-between gap-4 min-h-[44px] py-2 hair-b">
       <dt className="text-t2 shrink-0">{label}</dt>
-      <dd className="num text-right">{children}</dd>
+      <dd className="num text-right body-strong">{children}</dd>
     </div>
   );
 }

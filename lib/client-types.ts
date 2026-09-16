@@ -24,3 +24,11 @@ export const CHAIN_LABEL: Record<number, string> = { 1: "Ethereum", 8453: "Base"
 export function protocolKey(p: { id: string; chainId: number }) {
   return `${p.id}:${p.chainId}`;
 }
+
+/** Where a user would actually open the loan. Outbound links only; nothing here signs. */
+export const PROTOCOL_URL: Record<string, string> = {
+  "aave-v3": "https://app.aave.com",
+  spark: "https://app.spark.fi",
+  "compound-v3": "https://app.compound.finance",
+  "morpho-blue": "https://app.morpho.org",
+};

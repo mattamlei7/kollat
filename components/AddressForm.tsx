@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import type { ChainParam } from "@/hooks/useSnapshot";
-import { Segmented } from "./ui";
+import { Icon, Segmented } from "./ui";
 
 interface Props {
   initial: string;
@@ -14,12 +14,12 @@ interface Props {
 }
 
 const CHAINS: { value: ChainParam; label: string }[] = [
-  { value: "all", label: "Both" },
+  { value: "all", label: "All" },
   { value: "1", label: "Ethereum" },
   { value: "8453", label: "Base" },
 ];
 
-/** Address or ENS input. Submits on Enter only — never per keystroke. */
+/** Address or ENS input styled as the top-bar search pill. Submits on Enter only. */
 export function AddressForm({ initial, chain, onSubmit, onChain, error, busy }: Props) {
   const [value, setValue] = useState(initial);
   const [walletError, setWalletError] = useState<string | null>(null);
@@ -49,9 +49,12 @@ export function AddressForm({ initial, chain, onSubmit, onChain, error, busy }: 
     }
   }
 
+  const msg = error ?? walletError;
+
   return (
-    <form onSubmit={submit} className="flex-1 min-w-0 max-md:basis-full flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
+    <form onSubmit={submit} className="contents">
+      <div className="search">
+        <Icon name="search" />
         <label className="sr-only" htmlFor="address">
           Ethereum address or ENS name
         </label>
@@ -60,23 +63,23 @@ export function AddressForm({ initial, chain, onSubmit, onChain, error, busy }: 
           name="address"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="0x… or name.eth"
+          placeholder="Search an address or name.eth"
           spellCheck={false}
           autoComplete="off"
           autoCapitalize="off"
-          className="ctl num flex-1 min-w-[18rem]"
+          className="num"
         />
-        <Segmented options={CHAINS} value={chain} onChange={onChain} label="Chain" />
-        <button type="submit" disabled={busy} className="btn btn-primary">
-          {busy ? "Reading…" : "Read address"}
-        </button>
-        <button type="button" onClick={useWallet} className="btn btn-quiet">
-          Use my wallet
-        </button>
       </div>
-      {(error || walletError) && (
-        <p role="alert" className="text-t2">
-          {error ?? walletError}
+      <Segmented options={CHAINS} value={chain} onChange={onChain} label="Chain" small />
+      <button type="submit" disabled={busy} className="btn btn-primary">
+        {busy ? "Reading…" : "Read"}
+      </button>
+      <button type="button" onClick={useWallet} className="btn btn-quiet" title="Reads your wallet address only. Nothing is signed.">
+        Use wallet
+      </button>
+      {msg && (
+        <p role="alert" className="basis-full text-t2 label-strong hue-danger">
+          {msg}
         </p>
       )}
     </form>

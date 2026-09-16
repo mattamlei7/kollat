@@ -6,7 +6,7 @@ import { amount, pct, usd } from "@/lib/format";
 import type { ChainTable } from "@/lib/join";
 import { rowKeyOf, type Selection } from "./Rail";
 import { EmptyState, ErrorLine, StaleBadge } from "./States";
-import { Badge, type Tone } from "./ui";
+import { Avatar, Badge, type Tone } from "./ui";
 
 interface Props {
   table: ChainTable;
@@ -52,9 +52,7 @@ export function CapacityTable({ table, showChain, selection, tone, onSelect, onR
   return (
     <section aria-label={`${chainName} capacity`}>
       {showChain && (
-        <div className="px-[var(--gutter)] pt-4 pb-1">
-          <Badge>{chainName}</Badge>
-        </div>
+        <div className="px-[var(--gutter)] pt-4 pb-2 label-strong text-t2">{chainName}</div>
       )}
       <div className="overflow-x-auto">
         <table className="blotter">
@@ -65,7 +63,7 @@ export function CapacityTable({ table, showChain, selection, tone, onSelect, onR
               <th scope="col">Value</th>
               {columns.map((c) => (
                 <th scope="col" key={c.key}>
-                  <span className="text-t1">{c.name}</span>
+                  {c.name}
                   <span className="sub">{c.error ? "unavailable" : "max USDC · liq. price"}</span>
                 </th>
               ))}
@@ -77,22 +75,26 @@ export function CapacityTable({ table, showChain, selection, tone, onSelect, onR
               const rowSelected = selection?.chainId === table.chainId && selection.rowKey === rowKey;
               return (
                 <tr key={rowKey} data-wash={rowSelected && tone !== "none" ? tone : undefined}>
-                  <th scope="row" className="font-medium">
-                    {r.holding.token.symbol}
-                    {r.holding.nativeIncluded && r.holding.nativeIncluded !== "0" && (
-                      <span className="sub">incl. ETH — wrap to use</span>
-                    )}
+                  <th scope="row">
+                    <span className="name-cell">
+                      <Avatar text={r.holding.token.symbol} />
+                      <span className="lines">
+                        <span>{r.holding.token.symbol}</span>
+                        <span className="sub">
+                          {r.holding.nativeIncluded && r.holding.nativeIncluded !== "0" ? "incl. ETH · wrap to use" : usd(r.holding.priceUsd, { cents: true })}
+                        </span>
+                      </span>
+                    </span>
                   </th>
                   <td className="num">{amount(r.holding.units)}</td>
                   <td className="num">
-                    {usd(r.holding.usd)}
-                    <span className="sub">@ {usd(r.holding.priceUsd, { cents: true })}</span>
+                    <span className="primary">{usd(r.holding.usd)}</span>
                   </td>
                   {columns.map((c) => {
                     const cell = r.cells[c.key];
                     if (!cell || cell.kind === "unavailable") {
                       return (
-                        <td key={c.key} className="text-t3">
+                        <td key={c.key} className="text-t2">
                           —<span className="sub">{cell?.reason}</span>
                         </td>
                       );
@@ -106,10 +108,10 @@ export function CapacityTable({ table, showChain, selection, tone, onSelect, onR
                           aria-pressed={selected}
                           aria-label={`Simulate borrowing against ${r.holding.token.symbol} on ${c.name}`}
                           onClick={() => onSelect({ chainId: table.chainId, rowKey, colKey: c.key })}
-                          className={`w-full text-right ${selected ? "font-semibold" : ""}`}
+                          className="w-full text-left rounded-lg"
                         >
-                          {usd(capacity.maxBorrowUsd)}
-                          {r.best === c.key && <> <Badge>best</Badge></>}
+                          <span className={`primary ${selected ? "hue-primary font-semibold" : ""}`}>{usd(capacity.maxBorrowUsd)}</span>
+                          {r.best === c.key && <> <Badge>Best</Badge></>}
                           <span className="sub">
                             liq. {usd(capacity.liquidationPriceAtMaxUsd, { cents: true })}
                             {rate ? ` · ${pct(rate.borrowApyVariable)}` : ""}
@@ -122,15 +124,6 @@ export function CapacityTable({ table, showChain, selection, tone, onSelect, onR
                 </tr>
               );
             })}
-            {dust.length > 0 && (
-              <tr>
-                <td colSpan={3 + columns.length} className="text-left" style={{ paddingLeft: "var(--gutter)" }}>
-                  <button type="button" className="btn btn-text" onClick={() => setShowDust((s) => !s)}>
-                    {showDust ? "Hide" : "Show"} {dust.length} balance{dust.length === 1 ? "" : "s"} under $1
-                  </button>
-                </td>
-              </tr>
-            )}
           </tbody>
           <tfoot>
             <tr>
@@ -138,7 +131,7 @@ export function CapacityTable({ table, showChain, selection, tone, onSelect, onR
               <td className="num">{usd(rows.reduce((s, r) => s + r.holding.usd, 0))}</td>
               {columns.map((c) => (
                 <td key={c.key} className="num">
-                  {c.error ? <span className="text-t3 font-normal">—</span> : usd(totals[c.key])}
+                  {c.error ? <span className="text-t2 font-normal">—</span> : usd(totals[c.key])}
                   {c.stale && <> <StaleBadge /></>}
                 </td>
               ))}
@@ -146,8 +139,15 @@ export function CapacityTable({ table, showChain, selection, tone, onSelect, onR
           </tfoot>
         </table>
       </div>
+      {dust.length > 0 && (
+        <div className="px-[var(--gutter)] pt-4">
+          <button type="button" className="btn btn-quiet w-full" onClick={() => setShowDust((s) => !s)}>
+            {showDust ? "Hide" : "Show"} {dust.length} balance{dust.length === 1 ? "" : "s"} under $1
+          </button>
+        </div>
+      )}
       {failed.length > 0 && (
-        <div className="px-[var(--gutter)] py-3 hair-b flex flex-col gap-1">
+        <div className="px-[var(--gutter)] pt-4 flex flex-col gap-1">
           {failed.map((c) => <ErrorLine key={c.key} name={c.label} message={c.error!} retryable />)}
         </div>
       )}

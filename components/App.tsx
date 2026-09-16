@@ -1,15 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AddressForm } from "@/components/AddressForm";
 import { CapacityTable } from "@/components/CapacityTable";
 import { Positions } from "@/components/Positions";
 import { Rail, defaultSelection, simulate, type RailView, type Selection } from "@/components/Rail";
 import { EmptyState, SkeletonRows } from "@/components/States";
-import { tone } from "@/components/ui";
+import { Icon, tone } from "@/components/ui";
 import { useAccount, useMarkets, type ChainParam } from "@/hooks/useSnapshot";
-import { shortAddress, timeAgo } from "@/lib/format";
-import { buildChainTables, collectPositions } from "@/lib/join";
+import { pct, shortAddress, timeAgo, usd } from "@/lib/format";
+import { buildChainTables, collectPositions, type ChainTable } from "@/lib/join";
 
 export function App({ initialInput, initialChain }: { initialInput: string | null; initialChain: ChainParam }) {
   const [input, setInput] = useState<string | null>(initialInput);
@@ -35,6 +36,7 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
     [markets.data, account.data],
   );
   const positions = useMemo(() => (account.data ? collectPositions(account.data) : null), [account.data]);
+  const stats = useMemo(() => summarize(tables), [tables]);
 
   // The picked cell may not exist for a new address; fall back to the first borrowable holding.
   const sim = useMemo(() => simulate(tables, picked, frac) ?? simulate(tables, defaultSelection(tables), frac), [tables, picked, frac]);
@@ -50,9 +52,35 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
 
   return (
     <div className="shell">
+      <nav className="sidebar" aria-label="Primary">
+        <Link href="/" className="logo">
+          <span className="logo-mark">BR</span>
+          <span className="body-strong">Borrow Router</span>
+        </Link>
+        <div className="nav">
+          <Link className="nav-item" href="/" aria-current="page">
+            <Icon name="borrow" />
+            Borrow
+          </Link>
+          <a className="nav-item" href="#positions">
+            <Icon name="positions" />
+            Positions
+          </a>
+          <a className="nav-item" href="#protocols">
+            <Icon name="home" />
+            Protocols
+          </a>
+        </div>
+        <div className="pinned nav-item" title="This app never requests a signature and has no write path.">
+          <Icon name="lock" />
+          <span className="flex-1">Read-only</span>
+          <span className="toggle" data-on="true" aria-hidden />
+        </div>
+      </nav>
+
       <div className="main">
-        <header className="hair-b px-[var(--gutter)] py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
-          <h1 className="font-medium text-[15px]">Borrow Router</h1>
+        <header className="topbar">
+          <h1 className="display-sm">Borrow</h1>
           <AddressForm
             initial={input ?? ""}
             chain={chain}
@@ -91,44 +119,73 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
 
         {account.data && (
           <>
-            <div className="px-[var(--gutter)] pt-5 pb-2 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-              <h2 className="font-medium text-[15px]">
-                Holdings and borrowing capacity
-                <span className="text-t3 font-normal">
-                  {" "}
-                  <span className="num">{account.data.ens ?? shortAddress(account.data.address)}</span>
+            <section className="section" id="protocols">
+              <div className="row flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+                <h2 className="heading">
+                  Holdings
+                  <span className="text-t2 font-normal">
+                    {" "}
+                    <span className="num">{account.data.ens ?? shortAddress(account.data.address)}</span>
+                  </span>
+                </h2>
+                <span className="text-t2">
+                  {account.loading ? "Refreshing…" : account.fetchedAt ? `Read ${timeAgo(account.fetchedAt)}` : ""}
                 </span>
-              </h2>
-              <span className="text-t3">
-                {account.loading ? "refreshing…" : account.fetchedAt ? `read ${timeAgo(account.fetchedAt)}` : ""}
-              </span>
-            </div>
+              </div>
 
-            {emptyEverywhere ? (
-              <EmptyState
-                title="Nothing here to borrow against"
-                body="This address holds no asset the supported protocols accept as collateral on the selected chains. Try the other chain, or another address."
-                action={{ label: "Read again", onClick: account.refresh }}
-              />
-            ) : (
-              tables.map((t) => (
-                <CapacityTable
-                  key={t.chainId}
-                  table={t}
-                  showChain={tables.length > 1}
-                  selection={selection}
-                  tone={simTone}
-                  onSelect={select}
-                  onRetry={account.refresh}
-                />
-              ))
-            )}
+              {!emptyEverywhere && (
+                <div className="row mt-4 tiles">
+                  <div className="tile">
+                    <div className="label">Collateral value</div>
+                    <div className="value num">{usd(stats.value)}</div>
+                  </div>
+                  <div className="tile">
+                    <div className="label">Max USDC, best protocol per asset</div>
+                    <div className="value num">{usd(stats.maxBorrow)}</div>
+                  </div>
+                  <div className="tile">
+                    <div className="label">Lowest borrow APY</div>
+                    <div className="value num">
+                      {stats.lowestApy ? (
+                        <>
+                          {pct(stats.lowestApy.apy)} <span className="label-strong text-t2">{stats.lowestApy.name}</span>
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
-            {!emptyEverywhere && (
-            <p className="px-[var(--gutter)] py-3 text-t3 max-w-[80ch]">
-              Max USDC assumes the whole balance is supplied as collateral and borrowed to the protocol&apos;s maximum loan-to-value. The liquidation price is where that max loan would be liquidated. Aave E-mode and isolation-mode caps are not modelled.
-            </p>
-            )}
+              <div className="mt-6">
+                {emptyEverywhere ? (
+                  <EmptyState
+                    title="Nothing here to borrow against"
+                    body="This address holds no asset the supported protocols accept as collateral on the selected chains. Try the other chain, or another address."
+                    action={{ label: "Read again", onClick: account.refresh }}
+                  />
+                ) : (
+                  tables.map((t) => (
+                    <CapacityTable
+                      key={t.chainId}
+                      table={t}
+                      showChain={tables.length > 1}
+                      selection={selection}
+                      tone={simTone}
+                      onSelect={select}
+                      onRetry={account.refresh}
+                    />
+                  ))
+                )}
+              </div>
+
+              {!emptyEverywhere && (
+                <p className="row mt-4 text-t2 max-w-[80ch]">
+                  Max USDC assumes the whole balance is supplied as collateral and borrowed to the protocol&apos;s maximum loan-to-value. The liquidation price is where that max loan would be liquidated. Aave E-mode and isolation-mode caps are not modelled.
+                </p>
+              )}
+            </section>
 
             {positions && <Positions positions={positions.positions} errors={positions.errors} />}
           </>
@@ -155,4 +212,23 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
       </aside>
     </div>
   );
+}
+
+function summarize(tables: ChainTable[]) {
+  let value = 0;
+  let maxBorrow = 0;
+  let lowestApy: { apy: number; name: string } | null = null;
+  for (const t of tables) {
+    for (const r of t.rows) {
+      value += r.holding.usd;
+      const best = r.best ? r.cells[r.best] : null;
+      if (best?.kind === "capacity") maxBorrow += best.capacity.maxBorrowUsd;
+      for (const c of t.columns) {
+        const cell = r.cells[c.key];
+        if (cell?.kind !== "capacity" || !cell.rate) continue;
+        if (!lowestApy || cell.rate.borrowApyVariable < lowestApy.apy) lowestApy = { apy: cell.rate.borrowApyVariable, name: c.name };
+      }
+    }
+  }
+  return { value, maxBorrow, lowestApy };
 }

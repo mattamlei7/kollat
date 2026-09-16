@@ -3,7 +3,7 @@ import type { PositionView } from "@/lib/join";
 import { riskBand } from "@/lib/math/health";
 import { BandChip, HealthFactor, hueClass } from "./Risk";
 import { ErrorLine } from "./States";
-import { Def, tone } from "./ui";
+import { Avatar, Def, tone } from "./ui";
 
 interface Props {
   positions: PositionView[];
@@ -13,16 +13,18 @@ interface Props {
 /** Open positions with health factor, per-leg liquidation price and a plain-language read. */
 export function Positions({ positions, errors }: Props) {
   return (
-    <section aria-labelledby="positions">
-      <div className="px-[var(--gutter)] pt-6 pb-2 flex items-baseline gap-3">
-        <h2 id="positions" className="font-medium text-[15px]">Existing positions</h2>
-        {positions.length === 0 && errors.length === 0 && <span className="text-t3">none on the supported protocols</span>}
+    <section aria-labelledby="positions" id="positions" className="section">
+      <div className="row flex items-baseline gap-3">
+        <h2 id="positions" className="heading">Positions</h2>
+        {positions.length === 0 && errors.length === 0 && <span className="text-t2">None on the supported protocols</span>}
       </div>
-      {positions.map((v) => (
-        <PositionBlock key={v.key} view={v} />
-      ))}
+      <div className="flex flex-col gap-2 mt-4">
+        {positions.map((v) => (
+          <PositionBlock key={v.key} view={v} />
+        ))}
+      </div>
       {errors.length > 0 && (
-        <div className="px-[var(--gutter)] py-3 flex flex-col gap-1">
+        <div className="row pt-4 flex flex-col gap-1">
           {errors.map((e) => <ErrorLine key={e.name} {...e} />)}
         </div>
       )}
@@ -41,21 +43,29 @@ function PositionBlock({ view }: { view: PositionView }) {
   const drawdown = p.uniformDrawdownToLiquidation;
 
   return (
-    <article className="hair-t" aria-label={`${view.label} position`}>
-      <div className="px-[var(--gutter)] py-4 flex flex-wrap items-center gap-x-6 gap-y-2">
-        <h3 className="font-medium">{view.label}</h3>
-        <div className="flex items-center gap-3">
+    <article aria-label={`${view.label} position`}>
+      <div className="px-[var(--gutter)] py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+        <div className="name-cell">
+          <Avatar text={view.label} />
+          <div className="lines">
+            <span className="body-strong">{view.label}</span>
+            <span className="sub num">
+              {usd(collUsd - debtUsd)} net{collUsd > 0 && debtUsd > 0 ? ` · debt is ${pct(debtUsd / collUsd, 1)} of collateral` : ""}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 ml-auto">
           <span className="text-t2"><Def term="hf">HF</Def></span>
           <HealthFactor value={hf} size="lg" />
           <BandChip band={band} />
         </div>
         {p.healthFactorReported !== null && hf !== null && Math.abs(p.healthFactorReported - hf) > 0.005 && (
-          <span className="text-t3">
+          <span className="text-t2">
             protocol reports <span className="num">{p.healthFactorReported.toFixed(2)}</span>
           </span>
         )}
         {drawdown !== null && (
-          <span className="text-t3">
+          <span className="text-t2">
             all collateral <span className="num">{signedPct(-drawdown, 1)}</span> → liquidation
           </span>
         )}
@@ -69,8 +79,8 @@ function PositionBlock({ view }: { view: PositionView }) {
               <th scope="col">Leg</th>
               <th scope="col">Amount</th>
               <th scope="col">Value</th>
-              <th scope="col"><Def term="lt" right>Liq. threshold</Def></th>
-              <th scope="col"><Def term="liq" right>Liq. price</Def></th>
+              <th scope="col"><Def term="lt">Liq. threshold</Def></th>
+              <th scope="col"><Def term="liq">Liq. price</Def></th>
             </tr>
           </thead>
           <tbody>
@@ -78,24 +88,34 @@ function PositionBlock({ view }: { view: PositionView }) {
               const liq = liqByToken.get(l.token.address.toLowerCase());
               return (
                 <tr key={"c" + l.token.address}>
-                  <th scope="row" className="font-medium">
-                    {l.token.symbol}
-                    <span className="sub">collateral</span>
+                  <th scope="row">
+                    <span className="name-cell">
+                      <Avatar text={l.token.symbol} />
+                      <span className="lines">
+                        <span>{l.token.symbol}</span>
+                        <span className="sub">Collateral</span>
+                      </span>
+                    </span>
                   </th>
                   <td className="num">{amount(Number(l.amount) / 10 ** l.token.decimals)}</td>
                   <td className="num">{usd(l.usd)}</td>
-                  <td className="num">{l.liquidationThreshold ? pct(l.liquidationThreshold, 1) : <span className="text-t3">not collateral</span>}</td>
+                  <td className="num">{l.liquidationThreshold ? pct(l.liquidationThreshold, 1) : <span className="text-t2">not collateral</span>}</td>
                   <td className={`num ${hueClass(band)}`}>
-                    {liq === undefined ? "—" : liq === 0 ? <span className="text-t3">covered by other collateral</span> : usd(liq, { cents: true })}
+                    {liq === undefined ? "—" : liq === 0 ? <span className="text-t2">covered by other collateral</span> : usd(liq, { cents: true })}
                   </td>
                 </tr>
               );
             })}
             {p.debt.map((l) => (
               <tr key={"d" + l.token.address}>
-                <th scope="row" className="font-medium">
-                  {l.token.symbol}
-                  <span className="sub">debt</span>
+                <th scope="row">
+                  <span className="name-cell">
+                    <Avatar text={l.token.symbol} />
+                    <span className="lines">
+                      <span>{l.token.symbol}</span>
+                      <span className="sub">Debt</span>
+                    </span>
+                  </span>
                 </th>
                 <td className="num">{amount(Number(l.amount) / 10 ** l.token.decimals)}</td>
                 <td className="num">{usd(l.usd)}</td>
@@ -104,18 +124,11 @@ function PositionBlock({ view }: { view: PositionView }) {
               </tr>
             ))}
           </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={2}>{collUsd > 0 && debtUsd > 0 ? `Debt is ${pct(debtUsd / collUsd, 1)} of collateral` : ""}</td>
-              <td className="num">{usd(collUsd - debtUsd)} net</td>
-              <td colSpan={2} />
-            </tr>
-          </tfoot>
         </table>
       </div>
 
       {(t !== "none" && t !== "safe") || p.notes.length > 0 ? (
-        <div className="px-[var(--gutter)] py-3">
+        <div className="px-[var(--gutter)] pt-3">
           <div className="wash flex flex-col gap-2" data-tone={t === "safe" ? "none" : t}>
             {band === "watch" && (
               <p>

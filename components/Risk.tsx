@@ -25,7 +25,7 @@ export function hueClass(band: RiskBand): string {
 /** The health-factor figure. One of three places saturated hue is allowed. */
 export function HealthFactor({ value, size = "base" }: { value: number | null; size?: "base" | "lg" | "hero" }) {
   const band = value === null ? "none" : riskBand(value);
-  const cls = size === "hero" ? "text-[36px] leading-none font-medium" : size === "lg" ? "text-[20px] leading-none font-medium" : "font-medium";
+  const cls = size === "hero" ? "display-md" : size === "lg" ? "heading" : "body-strong";
   return <span className={`num ${cls} ${hueClass(band)}`}>{fmtHf(value)}</span>;
 }
 
