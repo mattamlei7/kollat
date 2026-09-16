@@ -5,7 +5,7 @@ const README = "https://github.com/mattamlei7/borrow-router#readme";
 const COLS: { title: string; links: [string, string][] }[] = [
   { title: "Protocols", links: [["Aave v3", "https://app.aave.com"], ["Spark", "https://app.spark.fi"], ["Compound v3", "https://app.compound.finance"], ["Morpho Blue", "https://app.morpho.org"], ["Fluid", "https://fluid.io"], ["Euler v2", "https://app.euler.finance"], ["Moonwell", "https://moonwell.fi"]] },
   { title: "Networks", links: [["Ethereum", "/borrow?chain=1"], ["Base", "/borrow?chain=8453"], ["Arbitrum", "/borrow?chain=42161"], ["Optimism", "/borrow?chain=10"], ["Polygon", "/borrow?chain=137"], ["Avalanche", "/borrow?chain=43114"]] },
-  { title: "Resources", links: [["How it works", "#how-it-works"], ["Data sources", "#read-only"], ["Methodology", README], ["FAQ", README]] },
+  { title: "Resources", links: [["How it works", "#how-it-works"], ["Data sources", "#read-only"], ["Methodology", README], ["FAQ", README], ["Contact", "/contact"]] },
   { title: "Legal", links: [["Terms", "#legal"], ["Privacy", "#legal"], ["Disclaimer — not financial advice", "#legal"]] },
 ];
 

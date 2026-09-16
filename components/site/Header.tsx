@@ -29,9 +29,10 @@ export function Header() {
           Borrow Router
         </Link>
         <nav aria-label="Site">
-          <a href="#protocols">Protocols</a>
-          <a href="#networks">Networks</a>
-          <a href="#how-it-works">How it works</a>
+          <Link href="/#protocols">Protocols</Link>
+          <Link href="/#networks">Networks</Link>
+          <Link href="/#how-it-works">How it works</Link>
+          <Link href="/contact">Contact</Link>
         </nav>
         <div className="right">
           <Link href="/borrow" className="pill">Check an address</Link>
