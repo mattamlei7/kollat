@@ -9,7 +9,7 @@ Non-custodial by construction: there is no wallet connection, no signing, no wri
 ```
 npm install
 cp .env.example .env.local   # optional: private RPC URLs
-npm run dev                  # http://localhost:3000
+npm run dev                  # http://localhost:3000 (homepage) · /borrow (the app)
 ```
 
 | Command | What |
@@ -30,6 +30,10 @@ lib/protocols/<name>.ts     one adapter per protocol
 lib/protocols/registry.ts   the list of live (protocol, chain) instances
 lib/math/health.ts          HF, max borrow, liquidation price, cost delta
 lib/snapshot.ts             joins all adapters into one response for the UI
+app/(site)/                 marketing homepage (/) — persistent WebGL sphere behind the sections
+app/borrow/                 the comparison app (/borrow)
+components/scene/           particle sphere, starfield, scroll-driven camera
+components/site/            homepage sections
 components/Rail.tsx         borrow simulator (pure over lib/math/health.ts)
 scripts/verify.ts           CLI cross-check tool
 ```

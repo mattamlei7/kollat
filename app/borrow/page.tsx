@@ -1,7 +1,7 @@
 import { App } from "@/components/App";
 import type { ChainParam } from "@/hooks/useSnapshot";
 
-export default async function Home({ searchParams }: PageProps<"/">) {
+export default async function Borrow({ searchParams }: PageProps<"/borrow">) {
   const sp = await searchParams;
   const a = typeof sp.a === "string" ? sp.a : null;
   const c = typeof sp.chain === "string" ? sp.chain : "all";

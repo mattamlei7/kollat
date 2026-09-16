@@ -12,9 +12,12 @@
   },
   "dependencies": {
     "@bgd-labs/aave-address-book": "^4.44.22",
+    "@react-three/fiber": "^9.7.0",
     "next": "16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "shiki": "^4.4.3",
+    "three": "^0.186.0",
     "viem": "^2.56.5",
     "zod": "^4.6.5"
   },
@@ -23,6 +26,7 @@
     "@types/node": "^24.13.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.186.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",

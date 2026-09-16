@@ -58,7 +58,7 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
           <span className="body-strong">Borrow Router</span>
         </Link>
         <div className="nav">
-          <Link className="nav-item" href="/" aria-current="page">
+          <Link className="nav-item" href="/borrow" aria-current="page">
             <Icon name="borrow" />
             Borrow
           </Link>
