@@ -1,0 +1,350 @@
+@import "tailwindcss";
+
+/*
+  Near-black canvas, hairline structure, three surfaces.
+  Chrome is achromatic. Color belongs to risk state and nothing else.
+*/
+:root {
+  --canvas: #111214;
+  --raised: #191a1d;
+  --control: #222327;
+  --hair: rgba(148, 152, 160, 0.2);
+  --hair-strong: rgba(148, 152, 160, 0.38);
+  --hover: rgba(25, 26, 29, 0.35);
+  --t1: #eceef0;
+  --t2: #9c9fa5;
+  --t3: #63666c;
+  --action: #f3f4f6;
+  --action-ink: #111214;
+
+  --safe: #4cc38a;
+  --caution: #e2a33a;
+  --danger: #ef5a4e;
+  --safe-wash: rgba(76, 195, 138, 0.1);
+  --caution-wash: rgba(226, 163, 58, 0.1);
+  --danger-wash: rgba(239, 90, 78, 0.1);
+
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --radius: 6px;
+  --radius-badge: 4px;
+  --row: 40px;
+  --control-h: 34px;
+  --gutter: 32px;
+  --rail-w: 416px;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-raised: var(--raised);
+  --color-control: var(--control);
+  --color-t1: var(--t1);
+  --color-t2: var(--t2);
+  --color-t3: var(--t3);
+  --color-action: var(--action);
+  --color-action-ink: var(--action-ink);
+  --color-safe: var(--safe);
+  --color-caution: var(--caution);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-plex-sans), "IBM Plex Sans", system-ui, sans-serif;
+}
+
+html {
+  font-size: 13px;
+  background: var(--canvas);
+}
+
+body {
+  background: var(--canvas);
+  color: var(--t1);
+  font-family: var(--font-sans);
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Every figure. Right-aligned in tables by the table rules below. */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hairlines are the only structure. */
+.hair-b { border-bottom: 1px solid var(--hair); }
+.hair-t { border-top: 1px solid var(--hair); }
+
+/* ---- Page shell: main column + sticky rail ---- */
+.shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--rail-w);
+  min-height: 100vh;
+}
+.main { min-width: 0; }
+.rail {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  border-left: 1px solid var(--hair);
+  background: var(--canvas);
+}
+@media (max-width: 1023px) {
+  :root { --gutter: 20px; }
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .rail {
+    top: auto;
+    bottom: 0;
+    height: auto;
+    max-height: 46vh;
+    border-left: 0;
+    border-top: 1px solid var(--hair);
+  }
+}
+
+/* ---- Tables: full-bleed rows, cells inside the gutter ---- */
+.blotter {
+  width: 100%;
+  border-collapse: collapse;
+}
+.blotter th,
+.blotter td {
+  height: var(--row);
+  padding: 0 10px;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--hair);
+  vertical-align: middle;
+}
+.blotter th {
+  font-weight: 500;
+  color: var(--t3);
+  border-bottom-color: var(--hair-strong);
+}
+.blotter th:first-child,
+.blotter td:first-child {
+  text-align: left;
+  padding-left: var(--gutter);
+}
+.blotter th:last-child,
+.blotter td:last-child {
+  padding-right: var(--gutter);
+}
+.blotter tbody tr:hover > * { background: var(--hover); }
+.blotter tbody tr[data-wash="safe"] > * { background: var(--safe-wash); }
+.blotter tbody tr[data-wash="caution"] > * { background: var(--caution-wash); }
+.blotter tbody tr[data-wash="danger"] > * { background: var(--danger-wash); }
+.blotter tbody th { color: var(--t1); }
+.blotter tfoot td {
+  border-bottom: 0;
+  border-top: 1px solid var(--hair-strong);
+  font-weight: 500;
+}
+/* Secondary figure or note next to a primary one. */
+.sub {
+  color: var(--t3);
+  font-weight: 400;
+}
+.blotter .sub {
+  display: block;
+  line-height: 1.25;
+}
+
+/* ---- Controls: the only things with control fill ---- */
+.ctl {
+  height: var(--control-h);
+  background: var(--control);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--t1);
+  padding: 0 10px;
+}
+.ctl::placeholder { color: var(--t3); }
+.ctl:hover { border-color: var(--hair); }
+.btn {
+  height: var(--control-h);
+  padding: 0 12px;
+  border-radius: var(--radius);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--action); color: var(--action-ink); }
+.btn-primary:disabled { opacity: 0.6; }
+.btn-quiet { background: var(--control); color: var(--t2); }
+.btn-quiet:hover { color: var(--t1); }
+.btn-text { color: var(--t2); padding: 0; height: auto; }
+.btn-text:hover { color: var(--t1); }
+
+/* Sliding-indicator segmented control. */
+.seg {
+  position: relative;
+  display: inline-flex;
+  height: var(--control-h);
+  padding: 3px;
+  background: var(--control);
+  border-radius: var(--radius);
+}
+.seg-ind {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  border-radius: 4px;
+  background: var(--raised);
+  border: 1px solid var(--hair);
+  transition: left 200ms ease, width 200ms ease;
+}
+.seg-ind[data-tone="safe"] { background: var(--safe-wash); border-color: var(--safe); }
+.seg-ind[data-tone="caution"] { background: var(--caution-wash); border-color: var(--caution); }
+.seg-ind[data-tone="danger"] { background: var(--danger-wash); border-color: var(--danger); }
+.seg-opt {
+  position: relative;
+  z-index: 1;
+  padding: 0 10px;
+  color: var(--t2);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.seg-opt[aria-checked="true"] { color: var(--t1); font-weight: 500; }
+
+/* Small inline badge: protocol names, chain tags, "best". */
+.badge {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: var(--radius-badge);
+  background: var(--control);
+  color: var(--t2);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  vertical-align: 1px;
+}
+
+/* Risk chip: wash + word + glyph. Never color alone. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: var(--radius-badge);
+  font-weight: 500;
+}
+.chip[data-tone="none"] { background: var(--control); color: var(--t2); }
+.chip[data-tone="safe"] { background: var(--safe-wash); color: var(--t1); }
+.chip[data-tone="caution"] { background: var(--caution-wash); color: var(--t1); }
+.chip[data-tone="danger"] { background: var(--danger-wash); color: var(--t1); }
+
+/* Block wash for narrative copy. */
+.wash { padding: 10px 12px; border-radius: var(--radius); }
+.wash[data-tone="safe"] { background: var(--safe-wash); }
+.wash[data-tone="caution"] { background: var(--caution-wash); }
+.wash[data-tone="danger"] { background: var(--danger-wash); }
+
+/* Saturated hue is rationed: HF number, liquidation price, danger copy. */
+.hue-safe { color: var(--safe); }
+.hue-caution { color: var(--caution); }
+.hue-danger { color: var(--danger); }
+
+/* Dotted-underline definition labels. Hover and focus reveal. */
+.def {
+  position: relative;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--t3);
+  cursor: help;
+}
+.def-tip {
+  display: none;
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  top: calc(100% + 6px);
+  width: 260px;
+  padding: 8px 10px;
+  background: var(--raised);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  color: var(--t2);
+  font-weight: 400;
+  text-align: left;
+  white-space: normal;
+  line-height: 1.4;
+}
+.def:hover .def-tip,
+.def:focus-visible .def-tip { display: block; }
+.def-tip.right { left: auto; right: 0; }
+
+/* Rail sub-view push. */
+@keyframes rail-in {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.rail-view { animation: rail-in 200ms ease; }
+
+/* Skeleton rows at the real row height. */
+.skel {
+  display: inline-block;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--control);
+}
+
+/* Native range, minimal. */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background: var(--hair-strong);
+  border-radius: 0;
+  margin: 12px 0;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--action);
+  border: 3px solid var(--canvas);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--action);
+  border: 3px solid var(--canvas);
+  cursor: pointer;
+}
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+select.ctl {
+  appearance: none;
+  padding-right: 26px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%239c9fa5' stroke-width='1.5'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+/* Focus is visible everywhere. */
+:focus-visible {
+  outline: 2px solid var(--t1);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seg-ind { transition: none; }
+  .rail-view { animation: none; }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
