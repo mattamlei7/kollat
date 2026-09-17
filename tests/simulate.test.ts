@@ -4,7 +4,7 @@ import type { ChainTable, PositionView } from "../lib/join";
 
 // Minimal fixture: 10 WETH on one protocol. Only the fields simulate() reads are real.
 const market = { id: "aave-v3:1:WETH", collateralPriceUsd: 2500, liquidationThreshold: 0.83, ltv: 0.805, liquidationPenalty: 0.05 } as never;
-const col = { key: "aave-v3:1", id: "aave-v3", name: "Aave v3", chainId: 1, label: "Aave v3 · Ethereum" };
+const col = { key: "aave-v3:1", id: "aave-v3", name: "Aave v3", chainId: 1, label: "Aave v3 · Ethereum", error: null, stale: false };
 const table: ChainTable = {
   chainId: 1,
   columns: [col],
