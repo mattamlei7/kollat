@@ -39,7 +39,7 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
   const stats = useMemo(() => summarize(tables), [tables]);
 
   // The picked cell may not exist for a new address; fall back to the first borrowable holding.
-  const sim = useMemo(() => simulate(tables, picked, frac) ?? simulate(tables, defaultSelection(tables), frac), [tables, picked, frac]);
+  const sim = useMemo(() => simulate(tables, picked, frac, positions?.positions) ?? simulate(tables, defaultSelection(tables), frac, positions?.positions), [tables, picked, frac, positions]);
   const selection: Selection | null = sim ? { chainId: sim.table.chainId, rowKey: sim.row.holding.token.address.toLowerCase(), colKey: sim.col.key } : null;
   const simTone = tone(sim?.band ?? "none");
 

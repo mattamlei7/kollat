@@ -7,7 +7,7 @@ import {
   annualCostDelta,
   distanceToLiquidation,
   healthFactor,
-  liquidationPriceSingle,
+  liquidationPrice,
   riskBand,
   type RiskBand,
 } from "@/lib/math/health";
@@ -38,6 +38,8 @@ export interface Sim {
   liq: number;
   /** Fractional move from today's price to the liquidation price (negative = drop). */
   dist: number;
+  /** Debt this address already carries on the same protocol (same pool, or same isolated market). */
+  existingDebt: number;
   apy: number | null;
   costPerYear: number | null;
   cheaper: { col: Column; bps: number; saving: number } | null;
@@ -60,7 +62,14 @@ export function defaultSelection(tables: ChainTable[]): Selection | null {
 }
 
 /** Pure: everything the rail and the table wash need for one borrow. */
-export function simulate(tables: ChainTable[], sel: Selection | null, frac: number): Sim | null {
+/** Positions the new borrow would share a health factor with: account-level ones, or the same isolated market. */
+export function foldable(positions: PositionView[] | null, chainId: number, protocolId: string, marketId: string) {
+  return (positions ?? []).filter(
+    (p) => p.chainId === chainId && p.protocolId === protocolId && (p.position.marketId === null || p.position.marketId === marketId),
+  );
+}
+
+export function simulate(tables: ChainTable[], sel: Selection | null, frac: number, positions: PositionView[] | null = null): Sim | null {
   if (!sel) return null;
   const table = tables.find((t) => t.chainId === sel.chainId);
   const row = table?.rows.find((r) => rowKeyOf(r) === sel.rowKey);
@@ -73,8 +82,16 @@ export function simulate(tables: ChainTable[], sel: Selection | null, frac: numb
   const max = capacity.maxBorrowUsd;
   const amount = max * frac;
   const units = row.holding.units;
-  const hf = healthFactor([{ units, priceUsd: market.collateralPriceUsd, liquidationThreshold: market.liquidationThreshold, ltv: market.ltv }], amount);
-  const liq = liquidationPriceSingle(units, market.liquidationThreshold, amount);
+  const existing = foldable(positions, table.chainId, col.id, market.id);
+  const existingDebt = existing.reduce((s, p) => s + p.position.debt.reduce((d, l) => d + l.usd, 0), 0);
+  // Existing collateral legs only matter by USD value, so price them at $1 per USD.
+  const legs = [
+    { units, priceUsd: market.collateralPriceUsd, liquidationThreshold: market.liquidationThreshold, ltv: market.ltv },
+    ...existing.flatMap((p) => p.position.collateral.map((l) => ({ units: l.usd, priceUsd: 1, liquidationThreshold: l.liquidationThreshold ?? 0, ltv: 0 }))),
+  ];
+  const debt = existingDebt + amount;
+  const hf = healthFactor(legs, debt);
+  const liq = liquidationPrice(legs, debt, 0);
   const apy = rate?.borrowApyVariable ?? null;
 
   let cheaper: Sim["cheaper"] = null;
@@ -90,7 +107,7 @@ export function simulate(tables: ChainTable[], sel: Selection | null, frac: numb
   }
 
   return {
-    table, row, col, cell, cols, max, amount, hf,
+    table, row, col, cell, cols, max, amount, hf, existingDebt,
     band: riskBand(hf),
     liq,
     dist: distanceToLiquidation(market.collateralPriceUsd, liq),
@@ -275,10 +292,7 @@ function Simulator({ sim, hint, positions, frac, onFrac, onSelect, onView }: Rai
   );
 }
 
-function Narrative({ sim, positions }: { sim: Sim; positions: PositionView[] | null }) {
-  const existing = positions?.find(
-    (p) => p.protocolId === sim.col.id && p.chainId === sim.table.chainId && p.position.debt.length > 0,
-  );
+function Narrative({ sim }: { sim: Sim; positions: PositionView[] | null }) {
   const sym = sim.row.holding.token.symbol;
   const drop = pct(Math.max(0, -sim.dist), 1);
   const penalty = pct(sim.cell.market.liquidationPenalty, 1);
@@ -303,8 +317,8 @@ function Narrative({ sim, positions }: { sim: Sim; positions: PositionView[] | n
       {sim.cell.market.ltv === sim.cell.market.liquidationThreshold && (
         <p>On {sim.col.name} the maximum borrow is the liquidation point: there is no buffer between the two.</p>
       )}
-      {existing && (
-        <p>This address already has debt on {sim.col.name}. The figures above treat the loan as a fresh position and do not include it.</p>
+      {sim.existingDebt > 0 && (
+        <p>Includes the {usd(sim.existingDebt)} this address already owes on {sim.col.name}, and the collateral behind it.</p>
       )}
       <p className="text-t3">
         Assumes the whole {sym} balance is supplied as collateral. Read-only: nothing here signs or moves funds. Opening a protocol leaves this site.
