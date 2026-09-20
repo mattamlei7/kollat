@@ -166,8 +166,10 @@ README coverage table exists for exactly this reason — say it before they find
 
 ### Not built
 
-No persistence. No instrumentation. No policy. No monitoring. No execution. Nothing runs as
-a service — no deployment, and therefore no uptime record.
+Historical pre-deployment assessment superseded by §5: the read-only app is deployed,
+policy evaluation is built, and Postgres persistence plus monitoring/webhooks are implemented.
+Database operation, scheduled monitoring and external delivery still need deployment-level
+verification. No transaction execution is built.
 
 ---
 
@@ -192,6 +194,13 @@ it requires a new adapter.
 | 10 | Partner auth, tenant isolation, quotas, rate limiting | Edge (Vercel/Cloudflare) for rate limiting; API keys once there is someone to key | after pilot |
 
 ### Service hardening — alongside items 4–7
+
+Local reliability follow-up (2026-09-20): atomic linked audit evidence, stale-aware monitoring,
+atomic event/outbox state changes, leased delivery claims and per-attempt history now have
+offline Postgres regression tests. Operator secrets are header-only and full audit history
+requires authentication. Read provenance is explicitly observational, not exact-block proof.
+See `docs/reliability.md` and `docs/webhooks.md` for rollout, legacy-record limits, and the
+deployment verification still required. This note is not a claim that these changes are deployed.
 
 1. Separate upstream API failures, RPC failures, invalid protocol data, timeouts, policy
    failures, and internal errors into a real error taxonomy.

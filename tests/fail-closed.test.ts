@@ -1,6 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { BaseLendingProtocol } from "../lib/protocols/base";
 import type { ChainId, Market, Position, ProtocolId, Rate } from "../lib/protocols/types";
+
+// Unit fixtures must not need an Ethereum node merely to obtain provenance.
+vi.mock("../lib/chains", () => ({ pinnedBlock: () => undefined, getClient: () => ({ getBlockNumber: async () => 26_000_000n }) }));
 
 const token = { chainId: 1 as ChainId, address: "0x0000000000000000000000000000000000000001" as const, symbol: "WETH", decimals: 18 };
 const market = (over: Partial<Market>): Market => ({

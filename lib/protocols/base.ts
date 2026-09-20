@@ -33,7 +33,8 @@ export abstract class BaseLendingProtocol implements LendingProtocol {
   protected abstract fetchPositions(address: Address, markets: Market[]): Promise<Position[]>;
 
   protected key(scope: string, extra = "") {
-    return `${this.id}:${this.chainId}:${scope}${extra ? ":" + extra : ""}`;
+    const pin = pinnedBlock(this.chainId);
+    return `${this.id}:${this.chainId}:${scope}${extra ? ":" + extra : ""}${pin === undefined ? "" : ":block:" + pin}`;
   }
 
   getMarkets(): Promise<Result<Market[]>> {
@@ -44,7 +45,7 @@ export abstract class BaseLendingProtocol implements LendingProtocol {
     return cachedResult(this.key("rates"), TTL.rates, async () => {
       const markets = await this.getMarkets();
       if (!markets.ok) return markets as unknown as Result<Rate[]>;
-      return this.guard(() => this.fetchRates(markets.data));
+      return this.guard(() => this.fetchRates(markets.data), markets);
     });
   }
 
@@ -53,7 +54,7 @@ export abstract class BaseLendingProtocol implements LendingProtocol {
     return cachedResult(this.key("positions", address.toLowerCase()), TTL.account, async () => {
       const markets = await this.getMarkets();
       if (!markets.ok) return markets as unknown as Result<Position[]>;
-      return this.guard(async () => (await this.fetchPositions(address, markets.data)).map(admitPosition));
+      return this.guard(async () => (await this.fetchPositions(address, markets.data)).map(admitPosition), markets);
     });
   }
 
@@ -62,7 +63,7 @@ export abstract class BaseLendingProtocol implements LendingProtocol {
     return cachedResult(this.key("capacity", address.toLowerCase()), TTL.account, async () => {
       const markets = await this.getMarkets();
       if (!markets.ok) return markets as unknown as Result<BorrowCapacity[]>;
-      return this.guard(() => this.computeCapacity(address, markets.data));
+      return this.guard(() => this.computeCapacity(address, markets.data), markets);
     });
   }
 
@@ -98,11 +99,19 @@ export abstract class BaseLendingProtocol implements LendingProtocol {
     });
   }
 
-  private async guard<T>(fn: () => Promise<T>): Promise<Result<T>> {
+  private async guard<T>(fn: () => Promise<T>, markets?: Extract<Result<Market[]>, { ok: true }>): Promise<Result<T>> {
     try {
-      // Head just before the read: every number in `data` describes state at or after this block.
-      const block = pinnedBlock(this.chainId) ?? (await getClient(this.chainId).getBlockNumber());
-      return ok(await fn(), Date.now(), false, Number(block));
+      // This is an observation, not an exact state anchor. Contract reads are only
+      // pinned in fixture mode; discovery APIs and cached markets are not pinned.
+      const pin = pinnedBlock(this.chainId);
+      const block = Number(pin ?? (await getClient(this.chainId).getBlockNumber()));
+      const data = await fn();
+      const result = ok(data, markets ? Math.min(Date.now(), markets.fetchedAt) : Date.now(), markets?.stale ?? false, block);
+      if (result.ok) result.provenance = {
+        kind: pin === undefined ? "observed-head" : "pinned-contract-reads", block,
+        ...(markets ? { markets: { block: markets.block, fetchedAt: markets.fetchedAt, stale: markets.stale, provenance: markets.provenance } } : {}),
+      };
+      return result;
     } catch (e) {
       return { ok: false, error: e instanceof InvalidData ? { code: "INVALID_DATA", message: e.message, retryable: true } : toProtocolError(e) };
     }

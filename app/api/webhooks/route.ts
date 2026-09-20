@@ -8,5 +8,9 @@ export async function GET(request: Request) {
   if (!authorized(request)) return Response.json({ error: "unauthorized" }, { status: 401 });
   const partner = new URL(request.url).searchParams.get("partner");
   if (!partner) return Response.json({ error: "partner is required" }, { status: 400 });
-  return Response.json({ partner, deliveries: await history(partner) }, { headers: { "cache-control": "no-store" } });
+  try {
+    return Response.json({ partner, deliveries: await history(partner) }, { headers: { "cache-control": "no-store" } });
+  } catch {
+    return Response.json({ error: "MONITOR_UNAVAILABLE" }, { status: 503, headers: { "cache-control": "no-store" } });
+  }
 }

@@ -21,7 +21,13 @@ npm run dev                  # http://localhost:3000 (homepage) · /borrow (the 
 
 API routes: `GET /api/markets?chain=1,8453`, `GET /api/account/<address-or-ens>?chain=…`, `POST /api/decide` (`{ policy, proposal }` → policy decision; see `policy.example.json`), `GET /api/health`.
 
-Every result carries `fetchedAt`, `stale` and `block` (the chain head observed before the read); every snapshot carries `completeness` — reads attempted / ok / stale / failed, the block range per chain, and each failure's code. A consumer should treat `failed > 0` or `stale > 0` as "not the whole picture".
+Successful results carry `fetchedAt`, `stale`, `block`, and `provenance`; failures carry an error. `block` is the observed head, **not proof of an exact-block snapshot**. Provenance distinguishes observed heads from fixture contract-read pins and retains cached market dependencies. Dependent reads inherit the oldest market timestamp and any stale flag. Public discovery APIs are not block-pinned.
+
+Every snapshot carries `completeness` — top-level reads attempted / ok / stale / failed, observed block ranges (including market dependencies), and each failure's code. `blockSemantics` explicitly labels these ranges as observations, not exact state. Completeness does not count undiscovered markets. A consumer should treat `failed > 0` or `stale > 0` as "not the whole picture".
+
+With `DATABASE_URL` configured, decisions, full policy values, complete market/account inputs, and linked snapshot rows commit atomically. A failed write returns HTTP 503 with `allow: false`; without a database the read-only demo explicitly returns `persisted: false`. Full audit history at `GET /api/decisions?address=…` now requires `Authorization: Bearer <CRON_SECRET>` because it includes policy and account evidence. Legacy records are retained but cannot be made complete retroactively.
+
+See [reliability and verification](docs/reliability.md) and [monitor/webhook setup](docs/webhooks.md). `npm test` includes offline Postgres transaction/outbox tests using test-only in-memory PGlite. The four archive-RPC fixtures remain opt-in via `RPC_URL_MAINNET`; their API-based market discovery is not an offline fixture.
 
 ## Layout
 

@@ -135,11 +135,18 @@ export interface ProtocolError {
 
 /**
  * Errors are values, never thrown — the UI renders them as designed states.
- * `block` is the chain head observed just before the read (or the pinned block), so a
- * consumer knows which state a number describes; null for reads that touched no chain.
+ * `block` is a compatibility field: observed head (or fixture contract-read pin),
+ * NOT proof that all inputs came from that block. Discovery APIs and cached
+ * dependencies can have different ages. Use provenance and retained inputs.
  */
+export interface ReadProvenance {
+  kind: "observed-head" | "pinned-contract-reads" | "unknown";
+  block: number | null;
+  markets?: { block: number | null; fetchedAt: number; stale: boolean; provenance?: ReadProvenance };
+}
+
 export type Result<T> =
-  | { ok: true; data: T; fetchedAt: number; stale: boolean; block: number | null }
+  | { ok: true; data: T; fetchedAt: number; stale: boolean; block: number | null; provenance?: ReadProvenance }
   | { ok: false; error: ProtocolError };
 
 /** One instance per (protocol, chain). Spark mainnet = the Aave v3 adapter with Spark addresses. */
@@ -159,6 +166,7 @@ export const ok = <T>(data: T, fetchedAt = Date.now(), stale = false, block: num
   fetchedAt,
   stale,
   block,
+  provenance: { kind: block === null ? "unknown" : "observed-head", block },
 });
 
 export const fail = <T>(code: ProtocolErrorCode, message: string, retryable = true): Result<T> => ({

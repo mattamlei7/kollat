@@ -1,4 +1,4 @@
-import { persistence, saveDecision, saveSnapshot } from "@/lib/db";
+import { persistence, saveDecisionRecord } from "@/lib/db";
 import { evaluate, PolicySchema, ProposalSchema } from "@/lib/policy";
 import { accountSnapshot, marketsSnapshot, toJson } from "@/lib/snapshot";
 import { z } from "zod";
@@ -17,8 +17,17 @@ export async function POST(request: Request) {
   const [markets, account] = await Promise.all([marketsSnapshot(chains), accountSnapshot(proposal.address, chains)]);
   if (!account) return Response.json({ error: "Unresolvable address" }, { status: 400 });
   const decision = evaluate(policy, proposal, markets, account);
-  // The record: the decision and the snapshot it rested on. Logged as well so nothing is lost without a database.
-  console.log(JSON.stringify({ kind: "decision", ...decision, proposal }));
-  const persisted = persistence && (await Promise.all([saveDecision(decision, proposal), saveSnapshot(account)]).then(() => true, (e) => { console.error("persist failed", e); return false; }));
+  // Console output is diagnostic only; it is not a durable audit record.
+  console.log(JSON.stringify({ kind: "decision", decisionId: decision.decisionId, allow: decision.allow, reasons: decision.reasons }));
+  let persisted = false;
+  try {
+    persisted = await saveDecisionRecord(decision, proposal, policy, markets, account);
+  } catch {
+    console.error("decision persistence failed", { decisionId: decision.decisionId });
+    // A configured audit store failing must never return a usable allow decision.
+    return Response.json({ error: "AUDIT_UNAVAILABLE", decisionId: decision.decisionId, allow: false, persisted: false }, { status: 503 });
+  }
+  // Without a configured DB this remains an explicitly non-persisted, read-only demo.
+  if (persistence && !persisted) return Response.json({ error: "AUDIT_UNAVAILABLE", allow: false, persisted: false }, { status: 503 });
   return new Response(toJson({ ...decision, persisted }), { headers: { "content-type": "application/json", "cache-control": "no-store" } });
 }

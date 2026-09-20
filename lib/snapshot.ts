@@ -48,6 +48,8 @@ export interface Holding {
 
 /** What a consumer needs before trusting a snapshot: how many reads it rests on, which failed, which are stale, and at what blocks. */
 export interface Completeness {
+  /** Observed heads can span cached dependencies; this is not an exact-state proof. */
+  blockSemantics?: "observed-heads-not-exact-state";
   attempted: number;
   ok: number;
   /** Served from a cached value because the refresh failed (`stale: true`). */
@@ -59,7 +61,7 @@ export interface Completeness {
 }
 
 function completeness(reads: { protocol: ProtocolId; chainId: ChainId; read: string; result: Result<unknown> }[]): Completeness {
-  const c: Completeness = { attempted: reads.length, ok: 0, stale: 0, failed: 0, blocks: {}, errors: [] };
+  const c: Completeness = { blockSemantics: "observed-heads-not-exact-state", attempted: reads.length, ok: 0, stale: 0, failed: 0, blocks: {}, errors: [] };
   for (const r of reads) {
     if (!r.result.ok) {
       c.failed++;
@@ -68,10 +70,11 @@ function completeness(reads: { protocol: ProtocolId; chainId: ChainId; read: str
     }
     c.ok++;
     if (r.result.stale) c.stale++;
-    const b = r.result.block;
-    if (b === null) continue;
-    const cur = c.blocks[r.chainId];
-    c.blocks[r.chainId] = cur ? { min: Math.min(cur.min, b), max: Math.max(cur.max, b) } : { min: b, max: b };
+    for (const b of [r.result.block, r.result.provenance?.markets?.block]) {
+      if (b == null) continue;
+      const cur = c.blocks[r.chainId];
+      c.blocks[r.chainId] = cur ? { min: Math.min(cur.min, b), max: Math.max(cur.max, b) } : { min: b, max: b };
+    }
   }
   return c;
 }
