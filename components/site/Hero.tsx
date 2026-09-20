@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { SCROLL_SPAN_VH } from "@/components/scene/useScrollProgress";
@@ -82,7 +81,6 @@ export function Hero({ stats }: { stats: Stats }) {
     <section className="hero-track" aria-label="Introduction">
       <div className="hero">
         <div className="hero-copy" ref={copy}>
-          <Image src="/kollat-wordmark-white.png" alt="Kollat" width={781} height={134} className="wordmark wordmark-hero" priority />
           <h1>Every crypto-backed loan, side by side.</h1>
           <p className="sub">
             Paste an address. See what it could borrow on Aave, Spark, Compound, Morpho, Fluid, Euler and Moonwell — at what rate, and where it gets liquidated.
