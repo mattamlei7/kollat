@@ -137,7 +137,8 @@
   .constellation { position: relative; min-height: 560px; display: grid; place-items: center; }
   .constellation .section-head { position: relative; z-index: 1; margin: 0; }
   .chip {
-    position: absolute; width: 44px; height: 44px; border-radius: 50%;
+    /* Circle grows with its label so wstETH fits as well as OP. */
+    position: absolute; min-width: 44px; aspect-ratio: 1; padding: 0 10px; box-sizing: border-box; border-radius: 50%; white-space: nowrap;
     display: grid; place-items: center; font-size: 9.5px; font-weight: 600; letter-spacing: 0.01em;
     color: #fff; border: 1px solid rgba(255, 255, 255, 0.12);
     text-align: center; line-height: 1;
@@ -146,7 +147,7 @@
   }
   @media (max-width: 640px) {
     .constellation { min-height: 480px; }
-    .chip { width: 36px; height: 36px; font-size: 10px; }
+    .chip { min-width: 36px; padding: 0 8px; font-size: 10px; }
   }
 
   /* feature rows */
