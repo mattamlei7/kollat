@@ -1,3 +1,4 @@
+import { persistence, saveDecision, saveSnapshot } from "@/lib/db";
 import { evaluate, PolicySchema, ProposalSchema } from "@/lib/policy";
 import { accountSnapshot, marketsSnapshot, toJson } from "@/lib/snapshot";
 import { z } from "zod";
@@ -16,7 +17,8 @@ export async function POST(request: Request) {
   const [markets, account] = await Promise.all([marketsSnapshot(chains), accountSnapshot(proposal.address, chains)]);
   if (!account) return Response.json({ error: "Unresolvable address" }, { status: 400 });
   const decision = evaluate(policy, proposal, markets, account);
-  // ponytail: stdout is the decision log until snapshot persistence (plan3.0 §5 #5) lands.
+  // The record: the decision and the snapshot it rested on. Logged as well so nothing is lost without a database.
   console.log(JSON.stringify({ kind: "decision", ...decision, proposal }));
-  return new Response(toJson(decision), { headers: { "content-type": "application/json", "cache-control": "no-store" } });
+  const persisted = persistence && (await Promise.all([saveDecision(decision, proposal), saveSnapshot(account)]).then(() => true, (e) => { console.error("persist failed", e); return false; }));
+  return new Response(toJson({ ...decision, persisted }), { headers: { "content-type": "application/json", "cache-control": "no-store" } });
 }
