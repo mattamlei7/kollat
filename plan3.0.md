@@ -10,6 +10,12 @@ build order in the strategy notes. The thesis and invariants in both still hold.
 
 ## 1. Executive assessment
 
+**End goal:** make getting a collateral-backed loan easier for ordinary users — through the
+wallets and exchanges they already use, not through another app. Everything below is the
+means to that. A partner buys safety and an audit trail; the user gets a borrow that is
+clearer and less frightening than today. If a feature serves the buyer but not the user,
+it is off-goal.
+
 Borrow Router should become a B2B risk-control and integration service for wallets,
 custodians, crypto neobanks, and exchanges that want to expose onchain borrowing without
 maintaining every lending protocol themselves.
@@ -173,12 +179,12 @@ it requires a new adapter.
 
 | # | Item | Why | Size |
 |---|---|---|---|
-| 1 | **No-signing invariant test** — grep `lib/` for `privateKeyToAccount`, `walletClient`, `signTransaction`, `sendTransaction`; assert none | Proves the thing being sold. First question in any vendor review | 10 lines |
-| 2 | **Golden reconciliation fixtures** — 2–3 known addresses per protocol at fixed blocks; assert `healthFactor ≈ healthFactorReported` (Aave, Euler) and market params against hand-verified values (rest) | `verify.ts` prints tables; nothing is asserted. Five of seven protocols have no independent health check | 1–2 days |
-| 3 | **Fail-closed rules for degraded data** — missing price, missing rate, stale snapshot, incomplete discovery, or protocol disagreement must never silently produce an approval | The difference between a risk-control service and a dashboard | 1 day |
-| 4 | **Deploy with private RPCs, start the uptime clock** | "Here is our uptime record" cannot be backfilled | hours |
+| ~~1~~ | ~~**No-signing invariant test**~~ Done 2026-09-19: `tests/no-signing.test.ts` | Proves the thing being sold. First question in any vendor review | — |
+| ~~2~~ | ~~**Golden reconciliation fixtures**~~ Done 2026-09-19 for Aave ×2 + Morpho at block 26013108 (`tests/fixtures.test.ts`, needs archive RPC). Euler and the rest still open | `verify.ts` prints tables; nothing is asserted | Euler next |
+| ~~3~~ | ~~**Fail-closed rules**~~ Done 2026-09-19: contract in `lib/protocols/base.ts` (`unpriced` markets, `INVALID_DATA` positions, balance reads throw); policy denies on stale/old/unavailable. Open: Moonwell silent omission | The difference between a risk-control service and a dashboard | — |
+| ~~4~~ | ~~**Deploy**~~ Live at borrow-router.vercel.app on Alchemy; `/api/health` added 2026-09-20. **Uptime monitor not yet pointed at it** | "Here is our uptime record" cannot be backfilled | 5 min |
 | 5 | **Snapshot persistence** — write every position read to `(partner, account, protocol, chain, ts, payload, signature)` | The reconciliation record is the moat, and it is worth zero until day one of writing it | 1 day (SQLite/Postgres) |
-| 6 | **Policy engine** `lib/policy/` — deny-by-default, versioned; see §6.2 | The one thing protocols structurally cannot offer — they cannot say no to themselves | 2–3 days |
+| ~~6~~ | ~~**Policy engine**~~ Done 2026-09-20: `lib/policy.ts`, `POST /api/decide`, `policy.example.json`. Missing: per-tenant storage, per-day notional, block numbers | The one thing protocols structurally cannot offer — they cannot say no to themselves | — |
 | 7 | **Monitor + signed webhooks** — cron over tracked accounts using existing reads | Cheapest sellable thing, and good pilot bait: "we watch your users' positions free for 90 days" | 2–3 days |
 | — | *line: everything below waits for a named partner* | | |
 | 8 | Preflight via `eth_simulateV1` / `simulateContract` — no fork, no Anvil | Only for the partner's protocols | after pilot |
@@ -245,6 +251,12 @@ maximum permitted reconciliation difference; blocked protocol or market status.
 Every decision returns `decisionId`, `policyVersion`, `allow`/`deny`, stable reason codes, a
 human-readable explanation, input block numbers and timestamps, and normalized pre-action and
 proposed post-action risk. Every decision is logged.
+
+**User-facing by requirement, not courtesy** (this is where the end goal lives): a deny always
+carries `safeMaxUsd` — the amount that *would* pass — and every decision carries the drawdown
+to liquidation ("ETH would have to fall 31%") so the partner can show the user something
+better than "transaction failed". Built 2026-09-20 (`lib/policy.ts`); the sentence the user
+sees is the next field to add.
 
 ### 6.3 Monitoring and signed webhooks
 
