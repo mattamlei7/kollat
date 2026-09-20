@@ -18,7 +18,6 @@
 .scene canvas { display: block; width: 100%; height: 100%; }
 
 @keyframes site-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
-@keyframes site-drift { from { margin-top: -8px; } to { margin-top: 8px; } }
 
 .site {
   --bg: #000000;
@@ -141,9 +140,9 @@
     position: absolute; width: 44px; height: 44px; border-radius: 50%;
     display: grid; place-items: center; font-size: 9.5px; font-weight: 600; letter-spacing: 0.01em;
     color: #fff; border: 1px solid rgba(255, 255, 255, 0.12);
-    animation: site-drift var(--dur, 9s) ease-in-out infinite alternate;
-    transform: translateY(calc(var(--par, 0px) * var(--k, 1)));
-    will-change: transform;
+    text-align: center; line-height: 1;
+    /* left/top are the bubble's centre, not its corner. Static: no drift, no parallax. */
+    transform: translate(-50%, -50%);
   }
   @media (max-width: 640px) {
     .constellation { min-height: 480px; }
@@ -218,7 +217,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .hero-track { height: 100vh; }
-    .chip, .scroll-hint { animation: none; }
+    .scroll-hint { animation: none; }
     & [data-reveal] { opacity: 1; transform: none; transition: none; }
     & * { transition-duration: 0ms !important; }
   }
