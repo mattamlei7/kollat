@@ -183,9 +183,9 @@ it requires a new adapter.
 | ~~2~~ | ~~**Golden reconciliation fixtures**~~ Done 2026-09-19 for Aave ×2 + Morpho at block 26013108 (`tests/fixtures.test.ts`, needs archive RPC). Euler and the rest still open | `verify.ts` prints tables; nothing is asserted | Euler next |
 | ~~3~~ | ~~**Fail-closed rules**~~ Done 2026-09-19: contract in `lib/protocols/base.ts` (`unpriced` markets, `INVALID_DATA` positions, balance reads throw); policy denies on stale/old/unavailable. Open: Moonwell silent omission | The difference between a risk-control service and a dashboard | — |
 | ~~4~~ | ~~**Deploy**~~ Live at borrow-router.vercel.app on Alchemy; `/api/health` added 2026-09-20. **Uptime monitor not yet pointed at it** | "Here is our uptime record" cannot be backfilled | 5 min |
-| 5 | **Snapshot persistence** — write every position read to `(partner, account, protocol, chain, ts, payload, signature)` | The reconciliation record is the moat, and it is worth zero until day one of writing it | 1 day (SQLite/Postgres) |
+| ~~5~~ | ~~**Snapshot persistence**~~ Built 2026-09-20: `lib/db.ts` (Neon), decisions + the snapshots they rest on, `GET /api/decisions`. **Unverified until `DATABASE_URL` is set in Vercel** | The reconciliation record is the moat, and it is worth zero until day one of writing it | — |
 | ~~6~~ | ~~**Policy engine**~~ Done 2026-09-20: `lib/policy.ts`, `POST /api/decide`, `policy.example.json`. Missing: per-tenant storage, per-day notional, block numbers | The one thing protocols structurally cannot offer — they cannot say no to themselves | — |
-| 7 | **Monitor + signed webhooks** — cron over tracked accounts using existing reads | Cheapest sellable thing, and good pilot bait: "we watch your users' positions free for 90 days" | 2–3 days |
+| ~~7~~ | ~~**Monitor + signed webhooks**~~ Built 2026-09-20: `lib/monitor.ts`, `/api/cron/monitor`, `/api/track`, `/api/webhooks`, `docs/webhooks.md`. Needs `DATABASE_URL` + `CRON_SECRET` and a 5-minute pinger | Cheapest sellable thing, and good pilot bait | — |
 | — | *line: everything below waits for a named partner* | | |
 | 8 | Preflight via `eth_simulateV1` / `simulateContract` — no fork, no Anvil | Only for the partner's protocols | after pilot |
 | 9 | Execution — wrap Aave Kit / Morpho SDK and verify their output against our math; hand-encode only where no SDK exists | Builders are commodity; verification is not | after pilot |
@@ -195,9 +195,8 @@ it requires a new adapter.
 
 1. Separate upstream API failures, RPC failures, invalid protocol data, timeouts, policy
    failures, and internal errors into a real error taxonomy.
-2. Attach chain block numbers and source timestamps to normalized data, so callers know
-   exactly what state was evaluated.
-3. Return partial results with explicit completeness metadata on multi-chain fan-out.
+2. ~~Attach chain block numbers and source timestamps to normalized data.~~ Done 2026-09-20: `Result.block`.
+3. ~~Return partial results with explicit completeness metadata.~~ Done 2026-09-20: `completeness` on every snapshot.
 4. Add structured logs, trace IDs, health checks, latency metrics, upstream error metrics,
    and alert-delivery metrics.
 5. Keep sensitive account data out of ordinary logs, and define a retention policy for audit
