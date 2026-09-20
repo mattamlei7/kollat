@@ -1,3 +1,4 @@
+import Image from "next/image";
 
 const README = "https://github.com/mattamlei7/borrow-router#readme";
 
@@ -13,7 +14,7 @@ export function Footer() {
     <footer className="site-footer">
       <div className="wrap">
         <div className="grid">
-          <div className="brand">Kollat</div>
+          <div><Image src="/kollat-wordmark-white.png" alt="Kollat" width={781} height={134} className="wordmark" priority /></div>
           {COLS.map((c) => (
             <div key={c.title}>
               <h4>{c.title}</h4>

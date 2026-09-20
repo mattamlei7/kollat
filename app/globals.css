@@ -129,6 +129,7 @@ body {
   background: var(--bg);
 }
 .sidebar .logo { display: flex; align-items: center; gap: 12px; padding: 9px 13px 25px; }
+.sidebar .wordmark { height: 16px; width: auto; display: block; }
 .nav { display: flex; flex-direction: column; gap: 0; }
 .nav-item {
   display: flex;

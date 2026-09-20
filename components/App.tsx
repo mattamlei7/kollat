@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AddressForm } from "@/components/AddressForm";
@@ -53,8 +54,8 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
   return (
     <div className="shell">
       <nav className="sidebar" aria-label="Primary">
-        <Link href="/" className="logo">
-          <span className="body-strong">Kollat</span>
+        <Link href="/" className="logo" aria-label="Kollat home">
+          <Image src="/kollat-wordmark-white.png" alt="Kollat" width={781} height={134} className="wordmark" priority />
         </Link>
         <div className="nav">
           <Link className="nav-item" href="/borrow" aria-current="page">

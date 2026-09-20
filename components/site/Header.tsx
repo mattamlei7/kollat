@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -14,8 +15,8 @@ export function Header() {
   return (
     <header className="site-header" data-solid={solid}>
       <div className="wrap">
-        <Link href="/" className="brand">
-          Kollat
+        <Link href="/" className="brand" aria-label="Kollat home">
+          <Image src="/kollat-wordmark-white.png" alt="Kollat" width={781} height={134} className="wordmark" priority />
         </Link>
         <nav aria-label="Site">
           <Link href="/#protocols">Protocols</Link>
