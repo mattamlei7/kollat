@@ -133,9 +133,13 @@ export interface ProtocolError {
   retryable: boolean;
 }
 
-/** Errors are values, never thrown — the UI renders them as designed states. */
+/**
+ * Errors are values, never thrown — the UI renders them as designed states.
+ * `block` is the chain head observed just before the read (or the pinned block), so a
+ * consumer knows which state a number describes; null for reads that touched no chain.
+ */
 export type Result<T> =
-  | { ok: true; data: T; fetchedAt: number; stale: boolean }
+  | { ok: true; data: T; fetchedAt: number; stale: boolean; block: number | null }
   | { ok: false; error: ProtocolError };
 
 /** One instance per (protocol, chain). Spark mainnet = the Aave v3 adapter with Spark addresses. */
@@ -149,11 +153,12 @@ export interface LendingProtocol {
   getPositions(address: Address): Promise<Result<Position[]>>;
 }
 
-export const ok = <T>(data: T, fetchedAt = Date.now(), stale = false): Result<T> => ({
+export const ok = <T>(data: T, fetchedAt = Date.now(), stale = false, block: number | null = null): Result<T> => ({
   ok: true,
   data,
   fetchedAt,
   stale,
+  block,
 });
 
 export const fail = <T>(code: ProtocolErrorCode, message: string, retryable = true): Result<T> => ({

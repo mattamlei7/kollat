@@ -47,8 +47,8 @@ export interface Decision {
   reasons: ReasonCode[];
   explanation: string[];
   evaluatedAt: number;
-  /** Ages of the inputs the decision rests on, ms. */
-  inputs: { marketAgeMs: number | null; accountAgeMs: number | null; stale: boolean };
+  /** Ages (ms) and observed blocks of the inputs the decision rests on. */
+  inputs: { marketAgeMs: number | null; accountAgeMs: number | null; stale: boolean; marketBlock: number | null; accountBlock: number | null };
   pre: { debtUsd: number; healthFactor: number | null } | null;
   /** drawdown: fractional drop across all collateral that would liquidate (1 − 1/HF). */
   post: { debtUsd: number; healthFactor: number; ltv: number; drawdownToLiquidation: number } | null;
@@ -64,7 +64,7 @@ export function evaluate(policy: Policy, proposal: Proposal, markets: MarketsSna
   const deny = (code: ReasonCode, why: string) => { reasons.push(code); explanation.push(why); };
   const decision = (extra: Partial<Decision> = {}): Decision => ({
     decisionId: randomUUID(), policyVersion: policy.version, allow: reasons.length === 0, reasons, explanation, evaluatedAt: now,
-    inputs: { marketAgeMs: null, accountAgeMs: null, stale: false }, pre: null, post: null, safeMaxUsd: null, ...extra,
+    inputs: { marketAgeMs: null, accountAgeMs: null, stale: false, marketBlock: null, accountBlock: null }, pre: null, post: null, safeMaxUsd: null, ...extra,
   });
 
   // 1. Allowlists — cheap, and a denial here needs no data at all.
@@ -84,6 +84,8 @@ export function evaluate(policy: Policy, proposal: Proposal, markets: MarketsSna
     marketAgeMs: now - pm.markets.fetchedAt,
     accountAgeMs: now - Math.min(pa.capacity.fetchedAt, pa.positions.fetchedAt),
     stale: pm.markets.stale || pa.capacity.stale || pa.positions.stale,
+    marketBlock: pm.markets.block,
+    accountBlock: pa.positions.block ?? pa.capacity.block,
   };
   if (Math.max(inputs.marketAgeMs, inputs.accountAgeMs) > policy.maxDataAgeMs) deny("DATA_STALE", `inputs are ${Math.max(inputs.marketAgeMs, inputs.accountAgeMs)}ms old; policy allows ${policy.maxDataAgeMs}ms`);
   if (inputs.stale) deny("DATA_STALE", "a snapshot is a stale fallback (its refresh failed)");

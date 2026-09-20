@@ -8,15 +8,16 @@ const NOW = 1_800_000_000_000;
 const policy: Policy = PolicySchema.parse(JSON.parse(readFileSync("policy.example.json", "utf8")));
 const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
-const ok = <T>(data: T, over: Partial<Extract<Result<T>, { ok: true }>> = {}): Result<T> => ({ ok: true, data, fetchedAt: NOW - 1000, stale: false, ...over });
+const ok = <T>(data: T, over: Partial<Extract<Result<T>, { ok: true }>> = {}): Result<T> => ({ ok: true, data, fetchedAt: NOW - 1000, stale: false, block: 26_000_000, ...over });
 
 // Wallet holds 10 WETH @ $2,500 on Aave (ltv 0.8, LT 0.83): capacity $20,000, collateral $25,000.
 const market = { id: "aave-v3:1:WETH>USDC", protocol: "aave-v3", chainId: 1, collateral: { chainId: 1, address: WETH, symbol: "WETH", decimals: 18 }, debt: { chainId: 1, address: USDC, symbol: "USDC", decimals: 6 }, ltv: 0.8, liquidationThreshold: 0.83, liquidationPenalty: 0.05, collateralPriceUsd: 2500, debtPriceUsd: 1, availableLiquidity: 10n ** 12n, status: "active", fetchedAt: NOW } as const;
 const capacity = { marketId: market.id, collateralBalance: 10n * 10n ** 18n, collateralUsd: 25_000, maxBorrowUsd: 20_000, liquidationPriceAtMaxUsd: 0, cappedByLiquidity: false };
 
 function snapshots(over: { markets?: Partial<MarketsSnapshot["protocols"][0]>; account?: Partial<AccountSnapshot["protocols"][0]> } = {}) {
-  const markets: MarketsSnapshot = { chains: [1], generatedAt: NOW, protocols: [{ id: "aave-v3", name: "Aave v3", chainId: 1, markets: ok([market]), rates: ok([]), ...over.markets }] };
-  const account: AccountSnapshot = { input: "x", address: "0x000000000000000000000000000000000000dEaD", ens: null, chains: [1], generatedAt: NOW, holdings: [], protocols: [{ id: "aave-v3", name: "Aave v3", chainId: 1, capacity: ok([capacity]), positions: ok([]), ...over.account }] };
+  const none = { attempted: 0, ok: 0, stale: 0, failed: 0, blocks: {}, errors: [] };
+  const markets: MarketsSnapshot = { chains: [1], generatedAt: NOW, completeness: none, protocols: [{ id: "aave-v3", name: "Aave v3", chainId: 1, markets: ok([market]), rates: ok([]), ...over.markets }] };
+  const account: AccountSnapshot = { input: "x", address: "0x000000000000000000000000000000000000dEaD", ens: null, chains: [1], generatedAt: NOW, holdings: [], completeness: none, protocols: [{ id: "aave-v3", name: "Aave v3", chainId: 1, capacity: ok([capacity]), positions: ok([]), ...over.account }] };
   return [markets, account] as const;
 }
 const proposal = { address: "0x000000000000000000000000000000000000dead", chainId: 1, protocolId: "aave-v3", marketId: market.id, borrowUsd: 5_000 };

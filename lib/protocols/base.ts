@@ -1,4 +1,5 @@
 import { formatUnits, isAddress, type Address } from "viem";
+import { getClient, pinnedBlock } from "../chains";
 import { cachedResult, TTL } from "../cache";
 import { getTokenBalances, WNATIVE } from "../balances";
 import { liquidationPriceSingle } from "../math/health";
@@ -99,7 +100,9 @@ export abstract class BaseLendingProtocol implements LendingProtocol {
 
   private async guard<T>(fn: () => Promise<T>): Promise<Result<T>> {
     try {
-      return ok(await fn());
+      // Head just before the read: every number in `data` describes state at or after this block.
+      const block = pinnedBlock(this.chainId) ?? (await getClient(this.chainId).getBlockNumber());
+      return ok(await fn(), Date.now(), false, Number(block));
     } catch (e) {
       return { ok: false, error: e instanceof InvalidData ? { code: "INVALID_DATA", message: e.message, retryable: true } : toProtocolError(e) };
     }

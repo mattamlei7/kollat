@@ -48,6 +48,7 @@ export function pinBlock(chainId: ChainId, blockNumber: bigint | null): void {
   if (blockNumber === null) pinned.delete(chainId);
   else pinned.set(chainId, blockNumber);
 }
+export const pinnedBlock = (chainId: ChainId) => pinned.get(chainId);
 
 export function getClient(chainId: ChainId): PublicClient {
   let c = clients.get(chainId);

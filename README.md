@@ -19,7 +19,9 @@ npm run dev                  # http://localhost:3000 (homepage) · /borrow (the 
 | `npm test` | Unit tests for the risk math (`lib/math/health.ts`) |
 | `npm run verify -- <address> [--chain 1\|8453] [--protocol <id>]` | Print every adapter's markets, rates, capacity and positions for an address, to check against the protocol front-ends |
 
-API routes: `GET /api/markets?chain=1,8453` and `GET /api/account/<address-or-ens>?chain=…`.
+API routes: `GET /api/markets?chain=1,8453`, `GET /api/account/<address-or-ens>?chain=…`, `POST /api/decide` (`{ policy, proposal }` → policy decision; see `policy.example.json`), `GET /api/health`.
+
+Every result carries `fetchedAt`, `stale` and `block` (the chain head observed before the read); every snapshot carries `completeness` — reads attempted / ok / stale / failed, the block range per chain, and each failure's code. A consumer should treat `failed > 0` or `stale > 0` as "not the whole picture".
 
 ## Layout
 

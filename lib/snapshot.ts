@@ -8,6 +8,7 @@ import type {
   LendingProtocol,
   Market,
   Position,
+  ProtocolErrorCode,
   ProtocolId,
   Rate,
   Result,
@@ -45,9 +46,40 @@ export interface Holding {
   nativeIncluded?: bigint;
 }
 
+/** What a consumer needs before trusting a snapshot: how many reads it rests on, which failed, which are stale, and at what blocks. */
+export interface Completeness {
+  attempted: number;
+  ok: number;
+  /** Served from a cached value because the refresh failed (`stale: true`). */
+  stale: number;
+  failed: number;
+  /** Per chain, the range of head blocks the successful reads observed. */
+  blocks: Partial<Record<ChainId, { min: number; max: number }>>;
+  errors: { protocol: ProtocolId; chainId: ChainId; read: string; code: ProtocolErrorCode; retryable: boolean }[];
+}
+
+function completeness(reads: { protocol: ProtocolId; chainId: ChainId; read: string; result: Result<unknown> }[]): Completeness {
+  const c: Completeness = { attempted: reads.length, ok: 0, stale: 0, failed: 0, blocks: {}, errors: [] };
+  for (const r of reads) {
+    if (!r.result.ok) {
+      c.failed++;
+      c.errors.push({ protocol: r.protocol, chainId: r.chainId, read: r.read, code: r.result.error.code, retryable: r.result.error.retryable });
+      continue;
+    }
+    c.ok++;
+    if (r.result.stale) c.stale++;
+    const b = r.result.block;
+    if (b === null) continue;
+    const cur = c.blocks[r.chainId];
+    c.blocks[r.chainId] = cur ? { min: Math.min(cur.min, b), max: Math.max(cur.max, b) } : { min: b, max: b };
+  }
+  return c;
+}
+
 export interface MarketsSnapshot {
   chains: ChainId[];
   protocols: ProtocolMarkets[];
+  completeness: Completeness;
   generatedAt: number;
 }
 
@@ -58,6 +90,7 @@ export interface AccountSnapshot {
   chains: ChainId[];
   protocols: ProtocolAccount[];
   holdings: Holding[];
+  completeness: Completeness;
   generatedAt: number;
 }
 
@@ -78,7 +111,12 @@ export async function marketsSnapshot(chains: ChainId[]): Promise<MarketsSnapsho
       return { id: p.id, name: p.name, chainId: p.chainId, markets, rates };
     }),
   );
-  return { chains, protocols, generatedAt: Date.now() };
+  return {
+    chains,
+    protocols,
+    completeness: completeness(protocols.flatMap((p) => [{ protocol: p.id, chainId: p.chainId, read: "markets", result: p.markets }, { protocol: p.id, chainId: p.chainId, read: "rates", result: p.rates }])),
+    generatedAt: Date.now(),
+  };
 }
 
 export async function resolveInput(input: string): Promise<{ address: Address; ens: string | null } | null> {
@@ -135,6 +173,7 @@ export async function accountSnapshot(input: string, chains: ChainId[]): Promise
     chains,
     protocols,
     holdings: [...holdings.values()].sort((a, b) => b.usd - a.usd),
+    completeness: completeness(protocols.flatMap((p) => [{ protocol: p.id, chainId: p.chainId, read: "capacity", result: p.capacity }, { protocol: p.id, chainId: p.chainId, read: "positions", result: p.positions }])),
     generatedAt: Date.now(),
   };
 }
