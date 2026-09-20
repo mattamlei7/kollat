@@ -18,7 +18,7 @@ export function ContactForm() {
     const name = String(f.get("name") ?? "").trim();
     const from = String(f.get("email") ?? "").trim();
     const message = String(f.get("message") ?? "").trim();
-    const subject = `Borrow Router: ${name || "contact"}`;
+    const subject = `Kollat: ${name || "contact"}`;
     const body = `${message}\n\n— ${name}${from ? ` <${from}>` : ""}`;
     window.location.href = `mailto:${TO}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     setSent(true);

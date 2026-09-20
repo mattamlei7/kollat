@@ -26,7 +26,7 @@ export function Header() {
       <div className="wrap">
         <Link href="/" className="brand">
           <Mark />
-          Borrow Router
+          Kollat
         </Link>
         <nav aria-label="Site">
           <Link href="/#protocols">Protocols</Link>

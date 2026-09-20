@@ -1,4 +1,4 @@
-# Borrow Router — Product & Engineering Strategy
+# Kollat — Product & Engineering Strategy
 
 **Last updated: 2026-09-19.** Working document: what the product is, what is built, what
 needs work, who to call, and what to bring.
@@ -16,7 +16,7 @@ means to that. A partner buys safety and an audit trail; the user gets a borrow 
 clearer and less frightening than today. If a feature serves the buyer but not the user,
 it is off-goal.
 
-Borrow Router should become a B2B risk-control and integration service for wallets,
+Kollat should become a B2B risk-control and integration service for wallets,
 custodians, crypto neobanks, and exchanges that want to expose onchain borrowing without
 maintaining every lending protocol themselves.
 
@@ -32,7 +32,7 @@ operational layer around those transactions:
 - reconcile onchain state with the partner's records;
 - maintain an audit trail explaining every decision.
 
-The service remains non-custodial. Borrow Router never holds customer assets, loads private
+The service remains non-custodial. Kollat never holds customer assets, loads private
 keys, signs transactions, or issues a stablecoin. The partner's wallet or custody system
 remains the signer.
 
@@ -44,7 +44,7 @@ engineering time, signs a letter of intent, or funds a pilot.
 
 ## 2. Positioning
 
-> Borrow Router is the policy, risk, and reconciliation layer for embedded onchain borrowing.
+> Kollat is the policy, risk, and reconciliation layer for embedded onchain borrowing.
 
 For a partner, the service answers four questions:
 
@@ -58,7 +58,7 @@ monitor your users' risk, and give your ops team an audit trail. You sign; we ne
 keys."* Not "we compare seven protocols."
 
 The initial buyer is a self-custody wallet — short integration path, product team that wants
-a borrow tab, no appetite for a risk desk. Borrow Router supplies normalized data and policy
+a borrow tab, no appetite for a risk desk. Kollat supplies normalized data and policy
 decisions; the wallet retains user-controlled signing. Qualified custodians and exchanges
 come later, because they require stronger operational controls, procurement, legal review,
 and service guarantees.
@@ -80,7 +80,7 @@ These four fit on one page and are the pre-answer to a partner's security review
 ### Explicit non-goals
 
 - Custody or key management.
-- Signing or submitting transactions from Borrow Router-controlled accounts.
+- Signing or submitting transactions from Kollat-controlled accounts.
 - Issuing a stablecoin or operating fiat rails.
 - Extending undercollateralized credit.
 - Guaranteeing returns, liquidity, protocol security, or liquidation avoidance.
@@ -309,7 +309,7 @@ Build transactions only after a partner asks. Prefer the official Aave and Morph
 independently decode, policy-check, and simulate their output. Custom builders only where no
 maintained SDK exists.
 
-Borrow Router returns unsigned requirements and transaction data. It does not instantiate a
+Kollat returns unsigned requirements and transaction data. It does not instantiate a
 signer, accept a private key, relay through an account it controls, or move user funds
 through its own infrastructure.
 
@@ -466,7 +466,7 @@ procurement, which is a better ending anyway.
 
 ### Protocols as the second payer
 
-Later, and worth remembering: once Borrow Router sits inside several wallets, Morpho and Aave
+Later, and worth remembering: once Kollat sits inside several wallets, Morpho and Aave
 curators may pay for qualified borrow flow. That turns competition with their BD teams into a
 channel relationship.
 
@@ -515,7 +515,7 @@ read, policy, monitoring, webhook, and audit APIs · partner-provided unsigned t
 plans for optional preflight · unsigned transactions only · full request, policy, simulation,
 and result log. No production execution until security, legal, and acceptance reviews close.
 
-**Pilot outcome to prove:** one wallet can rely on Borrow Router to evaluate, monitor, and
+**Pilot outcome to prove:** one wallet can rely on Kollat to evaluate, monitor, and
 reconcile a narrow set of lending positions without granting any signing authority.
 
 ### Partner commitments
@@ -591,7 +591,7 @@ variance.
 - Add other protocols only when customer demand and maintenance economics justify them.
 
 *Exit:* a partner-controlled signer executes approved transactions in its own environment
-without exposing keys to Borrow Router.
+without exposing keys to Kollat.
 
 ---
 
@@ -688,7 +688,7 @@ correlate with partner adoption.
 | File | Status |
 |---|---|
 | `borrow-router-plan.md` | Original plan and v1 spec. §1 thesis ("we route to the best one") and §3 roadmap (consumer v2) superseded. §7 spec is the v1 record; the design appendix stands. |
-| `Borrow Router — Strategy Notes & Build Prompt.md` | 2026-09-17 reflection. Diagnosis, invariants, dead ends, and the gate still hold. Build order superseded — monitoring was step 6, and now precedes execution. |
+| `Kollat — Strategy Notes & Build Prompt.md` | 2026-09-17 reflection. Diagnosis, invariants, dead ends, and the gate still hold. Build order superseded — monitoring was step 6, and now precedes execution. |
 | `README.md` | Current; coverage table added 2026-09-19. |
 | this file | Current working state. Update when an item in §5 moves. |
 

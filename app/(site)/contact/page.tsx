@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/site/ContactForm";
 
-export const metadata: Metadata = { title: "Contact · Borrow Router" };
+export const metadata: Metadata = { title: "Contact · Kollat" };
 
 export default function Contact() {
   return (

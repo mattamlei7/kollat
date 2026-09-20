@@ -7,9 +7,9 @@ const mono = JetBrains_Mono({ variable: "--font-mono", subsets: ["latin"], weigh
 const interTight = Inter_Tight({ variable: "--font-inter-tight", subsets: ["latin"], weight: ["400", "600"] });
 
 export const metadata: Metadata = {
-  title: "Borrow Router",
+  title: "Kollat",
   description:
-    "Read-only DeFi borrow router: what an address can borrow against its holdings on Aave, Spark, Compound, Morpho, Fluid, Euler and Moonwell, at what rate, and where it gets liquidated.",
+    "Kollat — read-only DeFi borrow comparison: what an address can borrow against its holdings on Aave, Spark, Compound, Morpho, Fluid, Euler and Moonwell, at what rate, and where it gets liquidated.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

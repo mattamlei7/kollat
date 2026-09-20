@@ -10,18 +10,18 @@ Hi [First name],
 
 [One verified sentence about their borrowing product or a public plan to build one. Omit if you cannot verify it.]
 
-I'm building Borrow Router. There's a working read-only borrowing demo; I'm now testing whether wallet teams would pay for policy checks, risk alerts, and a record explaining each borrowing decision.
+I'm building Kollat. There's a working read-only borrowing demo; I'm now testing whether wallet teams would pay for policy checks, risk alerts, and a record explaining each borrowing decision.
 
 When a borrowing user needs help, who owns the support ticket, and what can that person see about the position and earlier decisions?
 
 Would you be open to a 20-minute call about how your team handles this today? I'd like to understand your workflow before proposing an integration. If someone else owns it, a pointer would help.
 
 [Name]
-[Borrow Router demo](https://borrow-router.vercel.app/borrow)
+[Kollat demo](https://borrow-router.vercel.app/borrow)
 
 ## Short DM
 
-Hi [First name] — I'm building Borrow Router and interviewing wallet teams about borrowing policy and support. When a user has a borrowing problem, who investigates it, and what evidence do they have? Open to a 20-minute conversation about your current workflow, or is someone else at [Company] the right person?
+Hi [First name] — I'm building Kollat and interviewing wallet teams about borrowing policy and support. When a user has a borrowing problem, who investigates it, and what evidence do they have? Open to a 20-minute conversation about your current workflow, or is someone else at [Company] the right person?
 
 ## Follow-up: after 4–5 business days
 

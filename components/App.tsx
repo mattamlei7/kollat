@@ -55,7 +55,7 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
       <nav className="sidebar" aria-label="Primary">
         <Link href="/" className="logo">
           <span className="logo-mark">BR</span>
-          <span className="body-strong">Borrow Router</span>
+          <span className="body-strong">Kollat</span>
         </Link>
         <div className="nav">
           <Link className="nav-item" href="/borrow" aria-current="page">

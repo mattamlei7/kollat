@@ -1,8 +1,8 @@
-# Borrow Router
+# Kollat
 
 ## Borrowing inside your wallet, with policy checks and an explainable record
 
-Borrow Router is building a policy, risk-monitoring, and reconciliation layer for wallets that want to offer collateral-backed borrowing. The goal is simple: help users understand their borrowing choices inside the wallet they already use, while giving the wallet team controls and evidence it can stand behind.
+Kollat is building a policy, risk-monitoring, and reconciliation layer for wallets that want to offer collateral-backed borrowing. The goal is simple: help users understand their borrowing choices inside the wallet they already use, while giving the wallet team controls and evidence it can stand behind.
 
 ### The problem we want to validate
 
@@ -28,7 +28,7 @@ Together, we would define and test:
 - **Monitoring:** agreed risk events delivered to your team, with clear response ownership.
 - **Reconciliation and evidence:** retained inputs and decisions, compared with observed onchain positions so discrepancies can be investigated.
 
-Success means passing agreed test cases and showing your team can explain a decision, receive an alert, and identify a discrepancy. Borrow Router would never hold assets or keys, sign, or submit transactions. Signing stays with your wallet or custody system. The initial pilot would use agreed public fixtures or test accounts, with no production execution.
+Success means passing agreed test cases and showing your team can explain a decision, receive an alert, and identify a discrepancy. Kollat would never hold assets or keys, sign, or submit transactions. Signing stays with your wallet or custody system. The initial pilot would use agreed public fixtures or test accounts, with no production execution.
 
 ### The ask
 

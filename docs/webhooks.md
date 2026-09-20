@@ -1,6 +1,6 @@
 # Webhooks
 
-Borrow Router watches each tracked `(partner, account, chain, protocol)` and POSTs an event when the
+Kollat watches each tracked `(partner, account, chain, protocol)` and POSTs an event when the
 account's worst position changes risk band (`comfortable` → `watch` → `danger` → `liquidatable`), when
 its data stops being readable, and when it is readable again.
 
@@ -72,7 +72,7 @@ export async function handler(req, res) {
 ```
 POST /api/track   (Authorization: Bearer <CRON_SECRET>)
 { "partner": "demo-wallet", "address": "0x…", "chainId": 1, "protocolId": "aave-v3",
-  "webhookUrl": "https://partner.example/hooks/borrow-router", "secret": "<≥16 chars>" }
+  "webhookUrl": "https://partner.example/hooks/kollat", "secret": "<≥16 chars>" }
 ```
 
 The receiver example is pseudocode: supply raw-body reading and durable transactional
