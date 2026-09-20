@@ -54,7 +54,7 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
     <div className="shell">
       <nav className="sidebar" aria-label="Primary">
         <Link href="/" className="logo">
-          <span className="logo-mark">BR</span>
+          <span className="logo-mark">K</span>
           <span className="body-strong">Kollat</span>
         </Link>
         <div className="nav">

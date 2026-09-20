@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { SCROLL_SPAN_VH } from "@/components/scene/useScrollProgress";
-import { Mark } from "./Header";
 
 /** The one input on the site: hands the address to the /borrow app. */
 export function AddressInput({ id, note }: { id: string; note: string }) {
@@ -82,7 +81,6 @@ export function Hero({ stats }: { stats: Stats }) {
     <section className="hero-track" aria-label="Introduction">
       <div className="hero">
         <div className="hero-copy" ref={copy}>
-          <Mark className="mark" />
           <h1>Every crypto-backed loan, side by side.</h1>
           <p className="sub">
             Paste an address. See what it could borrow on Aave, Spark, Compound, Morpho, Fluid, Euler and Moonwell — at what rate, and where it gets liquidated.
