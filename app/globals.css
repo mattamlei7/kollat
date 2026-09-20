@@ -129,17 +129,6 @@ body {
   background: var(--bg);
 }
 .sidebar .logo { display: flex; align-items: center; gap: 12px; padding: 9px 13px 25px; }
-.logo-mark {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--primary);
-  display: grid;
-  place-items: center;
-  color: var(--fg-inverse);
-  font-weight: 700;
-  font-size: 15px;
-}
 .nav { display: flex; flex-direction: column; gap: 0; }
 .nav-item {
   display: flex;
