@@ -39,7 +39,9 @@ export async function getTokenBalances(
   ]);
   const erc20 = new Map<string, bigint>();
   results.forEach((r, i) => {
-    erc20.set(unique[i], r.status === "success" ? (r.result as bigint) : 0n);
+    // A failed read is not an empty wallet.
+    if (r.status !== "success") throw new Error(`balanceOf(${unique[i]}) failed: ${r.error.message}`);
+    erc20.set(unique[i], r.result as bigint);
   });
   return { erc20, native };
 }

@@ -159,6 +159,7 @@ export class CompoundV3Adapter extends BaseLendingProtocol {
       const maxBorrowUsd = Math.min(c.maxBorrowUsd, units * m.collateralPriceUsd * m.ltv);
       return {
         ...c,
+        collateralUsd: units * m.collateralPriceUsd,
         maxBorrowUsd,
         liquidationPriceAtMaxUsd: liquidationPriceSingle(units, m.liquidationThreshold, maxBorrowUsd),
         cappedByLiquidity: true,

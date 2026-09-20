@@ -192,7 +192,7 @@ export class MoonwellAdapter extends BaseLendingProtocol {
       if (room === undefined || c.collateralBalance <= room) return c;
       const units = Number(formatUnits(room, m.collateral.decimals));
       const maxBorrowUsd = Math.min(c.maxBorrowUsd, units * m.collateralPriceUsd * m.ltv);
-      return { ...c, maxBorrowUsd, liquidationPriceAtMaxUsd: liquidationPriceSingle(units, m.liquidationThreshold, maxBorrowUsd), cappedByLiquidity: true };
+      return { ...c, collateralUsd: units * m.collateralPriceUsd, maxBorrowUsd, liquidationPriceAtMaxUsd: liquidationPriceSingle(units, m.liquidationThreshold, maxBorrowUsd), cappedByLiquidity: true };
     });
   }
 

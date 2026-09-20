@@ -2,9 +2,10 @@
  * Prints every adapter's output for an address so numbers can be checked
  * against the protocol front-ends.
  *
- *   npx tsx scripts/verify.ts 0xabc… [--chain 1|8453|42161|10|137|43114] [--protocol aave-v3]
+ *   npx tsx scripts/verify.ts 0xabc… [--chain 1|8453|42161|10|137|43114] [--protocol aave-v3] [--block N]
  */
 import { formatUnits, isAddress, type Address } from "viem";
+import { pinBlock } from "../lib/chains";
 import { PROTOCOLS } from "../lib/protocols/registry";
 import type { ChainId, ProtocolId } from "../lib/protocols/types";
 
@@ -12,6 +13,7 @@ const args = process.argv.slice(2);
 const address = args.find((a) => a.startsWith("0x")) as Address | undefined;
 const chainArg = args.includes("--chain") ? Number(args[args.indexOf("--chain") + 1]) : undefined;
 const protoArg = args.includes("--protocol") ? (args[args.indexOf("--protocol") + 1] as ProtocolId) : undefined;
+const blockArg = args.includes("--block") ? BigInt(args[args.indexOf("--block") + 1]) : undefined;
 
 const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
 const pct = (n: number) => (n * 100).toFixed(2) + "%";
@@ -21,7 +23,8 @@ async function main() {
     (p) => (chainArg ? p.chainId === (chainArg as ChainId) : true) && (protoArg ? p.id === protoArg : true),
   );
   for (const p of targets) {
-    console.log(`\n=== ${p.name} · chain ${p.chainId} ===`);
+    if (blockArg !== undefined) pinBlock(p.chainId, blockArg);
+    console.log(`\n=== ${p.name} · chain ${p.chainId}${blockArg !== undefined ? ` · block ${blockArg}` : ""} ===`);
     const markets = await p.getMarkets();
     if (!markets.ok) { console.log("markets ERROR", markets.error); continue; }
     const rates = await p.getRates();

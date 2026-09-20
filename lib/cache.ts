@@ -13,6 +13,8 @@ interface Entry<T> {
 }
 
 const store = new Map<string, Entry<unknown>>();
+/** Account-keyed entries grow with every address queried; drop the oldest past this. */
+const MAX_ENTRIES = 5_000;
 
 export const TTL = {
   markets: 10 * 60_000,
@@ -50,6 +52,8 @@ export async function cachedResult<T>(
     );
     if (result.ok) {
       store.set(key, { value: result, fetchedAt: result.fetchedAt, ttlMs });
+      // ponytail: FIFO eviction (Map keeps insertion order); LRU or Redis if hit rate matters.
+      while (store.size > MAX_ENTRIES) store.delete(store.keys().next().value!);
       return result;
     }
     // Refresh failed: fall back to a stale-but-recent value if we have one.

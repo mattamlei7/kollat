@@ -62,6 +62,8 @@ export function statusReason(status: MarketJson["status"]): string {
       return "frozen";
     case "collateral-disabled":
       return "not accepted as collateral";
+    case "unpriced":
+      return "no oracle price";
     default:
       return "";
   }

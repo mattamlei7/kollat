@@ -65,7 +65,11 @@ export function defaultSelection(tables: ChainTable[]): Selection | null {
 /** Positions the new borrow would share a health factor with: account-level ones, or the same isolated market. */
 export function foldable(positions: PositionView[] | null, chainId: number, protocolId: string, marketId: string) {
   return (positions ?? []).filter(
-    (p) => p.chainId === chainId && p.protocolId === protocolId && (p.position.marketId === null || p.position.marketId === marketId),
+    (p) => {
+      if (p.chainId !== chainId || p.protocolId !== protocolId) return false;
+      const id = p.position.marketId;
+      return id === null || id === marketId || marketId.startsWith(id + ":");
+    },
   );
 }
 
@@ -81,7 +85,8 @@ export function simulate(tables: ChainTable[], sel: Selection | null, frac: numb
   const { market, capacity, rate } = cell;
   const max = capacity.maxBorrowUsd;
   const amount = max * frac;
-  const units = row.holding.units;
+  // Collateral the protocol would accept (a supply cap can take less than the wallet holds).
+  const units = Math.min(row.holding.units, capacity.collateralUsd / market.collateralPriceUsd);
   const existing = foldable(positions, table.chainId, col.id, market.id);
   const existingDebt = existing.reduce((s, p) => s + p.position.debt.reduce((d, l) => d + l.usd, 0), 0);
   // Existing collateral legs only matter by USD value, so price them at $1 per USD.

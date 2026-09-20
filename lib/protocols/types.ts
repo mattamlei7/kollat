@@ -25,7 +25,8 @@ export interface Token {
   decimals: number;
 }
 
-export type MarketStatus = "active" | "paused" | "frozen" | "collateral-disabled";
+/** `unpriced`: the protocol's oracle or params could not be read — the market is listed but never quoted. */
+export type MarketStatus = "active" | "paused" | "frozen" | "collateral-disabled" | "unpriced";
 
 /** A (collateral → debt) pair on one protocol on one chain. */
 export interface Market {
@@ -68,11 +69,13 @@ export interface BorrowCapacity {
   marketId: string;
   /** Wallet balance of the collateral token (not yet supplied). */
   collateralBalance: bigint;
+  /** USD value of the collateral the protocol would accept right now — the wallet balance, or less when a supply cap clamps it. */
   collateralUsd: number;
   /** collateralUsd × ltv, capped by availableLiquidity. */
   maxBorrowUsd: number;
   /** Collateral price at which a max-LTV borrow becomes liquidatable. */
   liquidationPriceAtMaxUsd: number;
+  /** maxBorrowUsd was reduced by market liquidity or a supply cap. */
   cappedByLiquidity: boolean;
   /** Native ETH counted toward a WETH market (user would need to wrap). */
   nativeBalanceIncluded?: bigint;
@@ -89,7 +92,11 @@ export interface PositionLeg {
 export interface Position {
   protocol: ProtocolId;
   chainId: ChainId;
-  /** null for account-level (cross-collateral) protocols like Aave / Compound. */
+  /**
+   * The market (or pool) this position shares a health factor with; null for
+   * account-level protocols (Aave, Compound, Moonwell). A prefix of a market id
+   * (e.g. `euler-v2:1:<debtVault>`) means every market under that pool.
+   */
   marketId: string | null;
   collateral: PositionLeg[];
   debt: PositionLeg[];
@@ -112,6 +119,8 @@ export type ProtocolErrorCode =
   | "PROTOCOL_PAUSED"
   | "UNSUPPORTED_CHAIN"
   | "INVALID_ADDRESS"
+  /** A read succeeded but produced a value no risk number may be built on (see `admit` in base.ts). */
+  | "INVALID_DATA"
   | "UNKNOWN";
 
 export interface ProtocolError {

@@ -38,6 +38,21 @@ components/Rail.tsx         borrow simulator (pure over lib/math/health.ts)
 scripts/verify.ts           CLI cross-check tool
 ```
 
+## Coverage
+
+Discovery is deliberately narrow; a position outside it is not shown and a market outside it is not compared. Anyone consuming the API should treat these as the contract:
+
+| Protocol | What is listed | What is not |
+|---|---|---|
+| Aave v3 / Spark | Every reserve that can collateralise USDC | Positions with non-USDC debt still show, with all debt legs |
+| Compound v3 | Native-USDC Comets only | USDC.e Comets (Polygon), bridged-USDbC Comet (Base) |
+| Morpho Blue | USDC-loan markets with ≥ $250k supplied; one market per collateral (most liquidity) | Smaller markets, and positions in any market not chosen |
+| Fluid | USDC-debt vaults; one vault per collateral (most borrowable) | Smart-collateral / smart-debt vaults, and positions in vaults not chosen |
+| Euler v2 | Top 4 USDC vaults by size; one collateral vault per token | Other vaults; positions on sub-accounts whose controller is elsewhere are listed but not folded into simulations |
+| Moonwell | Comptroller core markets | Positions in unlisted markets (a note is added when one is detected) |
+
+Simulations fold an existing position into the new borrow only when they share a health factor: the same account-level protocol, the same isolated market, or the same Euler debt vault.
+
 ## Adding a protocol
 
 Every protocol is normalised into `(collateral → debt)` markets with `ltv`, `liquidationThreshold`, `liquidationPenalty` and oracle prices, so one formula computes capacity, health factor and liquidation price for all of them.

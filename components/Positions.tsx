@@ -34,7 +34,8 @@ export function Positions({ positions, errors }: Props) {
 
 function PositionBlock({ view }: { view: PositionView }) {
   const p = view.position;
-  const hf = p.healthFactor;
+  // The protocol's own number is authoritative (Aave E-mode, Euler unit of account); ours is the cross-check.
+  const hf = p.healthFactorReported ?? p.healthFactor;
   const band = hf === null ? "none" : riskBand(hf);
   const t = tone(band);
   const debtUsd = p.debt.reduce((s, l) => s + l.usd, 0);
@@ -59,9 +60,9 @@ function PositionBlock({ view }: { view: PositionView }) {
           <HealthFactor value={hf} size="lg" />
           <BandChip band={band} />
         </div>
-        {p.healthFactorReported !== null && hf !== null && Math.abs(p.healthFactorReported - hf) > 0.005 && (
+        {p.healthFactorReported !== null && p.healthFactor !== null && Math.abs(p.healthFactorReported - p.healthFactor) > 0.005 && (
           <span className="text-t2">
-            protocol reports <span className="num">{p.healthFactorReported.toFixed(2)}</span>
+            we compute <span className="num">{p.healthFactor.toFixed(2)}</span>
           </span>
         )}
         {drawdown !== null && (

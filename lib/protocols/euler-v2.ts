@@ -310,7 +310,7 @@ export class EulerV2Adapter extends BaseLendingProtocol {
       out.push({
         protocol: this.id,
         chainId: this.chainId,
-        marketId: null,
+        marketId: `${this.id}:${this.chainId}:${controller}`,
         collateral,
         debt: debt > 0n ? [{ token: debtToken, amount: debt, usd: debtUsd }] : [],
         healthFactor: hf,

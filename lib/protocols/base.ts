@@ -36,7 +36,7 @@ export abstract class BaseLendingProtocol implements LendingProtocol {
   }
 
   getMarkets(): Promise<Result<Market[]>> {
-    return cachedResult(this.key("markets"), TTL.markets, () => this.guard(() => this.fetchMarkets()));
+    return cachedResult(this.key("markets"), TTL.markets, () => this.guard(async () => (await this.fetchMarkets()).map(admitMarket)));
   }
 
   getRates(): Promise<Result<Rate[]>> {
@@ -52,7 +52,7 @@ export abstract class BaseLendingProtocol implements LendingProtocol {
     return cachedResult(this.key("positions", address.toLowerCase()), TTL.account, async () => {
       const markets = await this.getMarkets();
       if (!markets.ok) return markets as unknown as Result<Position[]>;
-      return this.guard(() => this.fetchPositions(address, markets.data));
+      return this.guard(async () => (await this.fetchPositions(address, markets.data)).map(admitPosition));
     });
   }
 
@@ -101,7 +101,35 @@ export abstract class BaseLendingProtocol implements LendingProtocol {
     try {
       return ok(await fn());
     } catch (e) {
-      return { ok: false, error: toProtocolError(e) };
+      return { ok: false, error: e instanceof InvalidData ? { code: "INVALID_DATA", message: e.message, retryable: true } : toProtocolError(e) };
     }
   }
+}
+
+/**
+ * Fail-closed contract. A read that succeeds but yields a number no risk figure
+ * may rest on is never passed through as 0, 1 or NaN:
+ *  - a market whose prices or thresholds are unusable is returned with
+ *    `status: "unpriced"` — listed, never quoted, never "best";
+ *  - a position with any leg that cannot be priced is not returned at all: the
+ *    protocol's Result is an INVALID_DATA error naming the leg;
+ *  - a balance read that fails throws (lib/balances.ts) rather than reading as 0;
+ *  - a stale cache value is served with `stale: true` and its `fetchedAt`; how old is
+ *    too old is the consumer's rule, not the adapter's.
+ */
+class InvalidData extends Error {}
+const usable = (n: number) => Number.isFinite(n) && n > 0;
+
+function admitMarket(m: Market): Market {
+  if (m.status !== "active") return m;
+  const bad = !usable(m.collateralPriceUsd) || !usable(m.debtPriceUsd) || !usable(m.liquidationThreshold) || m.liquidationThreshold > 1 || m.ltv > m.liquidationThreshold;
+  return bad ? { ...m, status: "unpriced" } : m;
+}
+
+function admitPosition(p: Position): Position {
+  for (const l of [...p.collateral, ...p.debt]) {
+    if (!Number.isFinite(l.usd) || (l.amount > 0n && l.usd <= 0)) throw new InvalidData(`${l.token.symbol} on ${p.protocol} has no usable price; position withheld`);
+  }
+  if (p.healthFactor !== null && !Number.isFinite(p.healthFactor)) throw new InvalidData(`health factor on ${p.protocol} is not finite; position withheld`);
+  return p;
 }

@@ -162,7 +162,7 @@ export class FluidAdapter extends BaseLendingProtocol {
       return {
         protocol: this.id,
         chainId: this.chainId,
-        marketId: this.vaultOf.has(id) ? id : null,
+        marketId: id,
         collateral: [{ token: colToken, amount: p.supply, usd: units * price, liquidationThreshold: lt }],
         debt: p.borrow > 0n ? [{ token: debtToken, amount: p.borrow, usd: debtUsd }] : [],
         healthFactor: hf,

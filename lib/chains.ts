@@ -37,12 +37,23 @@ export const CHAIN_NAMES: Record<ChainId, string> = {
 };
 
 const clients = new Map<ChainId, PublicClient>();
+const pinned = new Map<ChainId, bigint>();
+const PINNABLE = new Set(["multicall", "readContract", "getBalance"]);
+
+/**
+ * Pin every contract read on a chain to one block, so fixtures reproduce.
+ * Public RPCs keep ~128 blocks of state; older pins need an archive RPC in env.
+ */
+export function pinBlock(chainId: ChainId, blockNumber: bigint | null): void {
+  if (blockNumber === null) pinned.delete(chainId);
+  else pinned.set(chainId, blockNumber);
+}
 
 export function getClient(chainId: ChainId): PublicClient {
   let c = clients.get(chainId);
   if (c) return c;
   const urls = [ENV_RPC[chainId], ...PUBLIC_RPC[chainId]].filter((u): u is string => !!u);
-  c = createPublicClient({
+  const raw = createPublicClient({
     chain: CHAINS[chainId],
     transport: fallback(
       urls.map((u) => http(u, { timeout: 15_000, retryCount: 1, batch: true })),
@@ -50,6 +61,17 @@ export function getClient(chainId: ChainId): PublicClient {
     ),
     batch: { multicall: { wait: 16 } },
   }) as PublicClient;
+  // Only the three read methods adapters use are pinned; anything else passes through untouched.
+  c = new Proxy(raw, {
+    get(target, key) {
+      const v = Reflect.get(target, key);
+      if (typeof v !== "function" || !PINNABLE.has(key as string)) return v;
+      return (args: object) => {
+        const blockNumber = pinned.get(chainId);
+        return v.call(target, blockNumber === undefined ? args : { ...args, blockNumber });
+      };
+    },
+  });
   clients.set(chainId, c);
   return c;
 }

@@ -123,7 +123,7 @@ export class MorphoBlueAdapter extends BaseLendingProtocol {
       const [totalSupplyAssets, , totalBorrowAssets] = states[i];
       const price = prices[i];
       const lltv = Number(lltvRaw) / WAD;
-      const debtPriceUsd = m.loanAsset.priceUsd ?? 1;
+      const debtPriceUsd = m.loanAsset.priceUsd ?? 0; // 0 → admitMarket marks it unpriced
       const priceInLoan = price.status === "success" ? (Number(price.result) / ORACLE_SCALE) * 10 ** (c.decimals - m.loanAsset.decimals) : 0;
       const collateral: Token = { chainId: this.chainId, address: collateralToken, symbol: c.symbol, decimals: c.decimals };
       const debt: Token = { chainId: this.chainId, address: loanToken, symbol: m.loanAsset.symbol, decimals: m.loanAsset.decimals };
@@ -140,8 +140,7 @@ export class MorphoBlueAdapter extends BaseLendingProtocol {
         collateralPriceUsd: priceInLoan * debtPriceUsd,
         debtPriceUsd,
         availableLiquidity: totalSupplyAssets > totalBorrowAssets ? totalSupplyAssets - totalBorrowAssets : 0n,
-        // An unreadable oracle means nothing can be priced; do not quote the market.
-        status: price.status === "success" ? "active" : "paused",
+        status: price.status === "success" ? "active" : "unpriced",
         fetchedAt: now,
       });
     });
