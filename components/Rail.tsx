@@ -3,6 +3,7 @@
 import { CHAIN_LABEL, PROTOCOL_URL } from "@/lib/client-types";
 import { amount as fmtAmount, pct, signedPct, timeAgo, usd } from "@/lib/format";
 import type { Cell, ChainTable, Column, PositionView, Row } from "@/lib/join";
+import { sharesHealthFactor } from "@/lib/protocols/types";
 import {
   annualCostDelta,
   distanceToLiquidation,
@@ -65,11 +66,7 @@ export function defaultSelection(tables: ChainTable[]): Selection | null {
 /** Positions the new borrow would share a health factor with: account-level ones, or the same isolated market. */
 export function foldable(positions: PositionView[] | null, chainId: number, protocolId: string, marketId: string) {
   return (positions ?? []).filter(
-    (p) => {
-      if (p.chainId !== chainId || p.protocolId !== protocolId) return false;
-      const id = p.position.marketId;
-      return id === null || id === marketId || marketId.startsWith(id + ":");
-    },
+    (p) => p.chainId === chainId && p.protocolId === protocolId && sharesHealthFactor(p.position.marketId, marketId),
   );
 }
 

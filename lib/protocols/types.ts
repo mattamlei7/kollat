@@ -113,6 +113,10 @@ export interface Position {
   fetchedAt: number;
 }
 
+/** Does a position with `positionMarketId` share a health factor with `marketId`? (see Position.marketId) */
+export const sharesHealthFactor = (positionMarketId: string | null, marketId: string): boolean =>
+  positionMarketId === null || positionMarketId === marketId || marketId.startsWith(positionMarketId + ":");
+
 export type ProtocolErrorCode =
   | "RPC_UNAVAILABLE"
   | "UPSTREAM_API"

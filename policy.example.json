@@ -1,0 +1,19 @@
+{
+  "version": "demo-wallet-2026-09-20",
+  "chains": [1, 8453],
+  "protocols": ["aave-v3", "morpho-blue"],
+  "debtAssets": [
+    "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+  ],
+  "collateralAssets": [
+    "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+    "0x4200000000000000000000000000000000000006",
+    "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf"
+  ],
+  "maxLtv": 0.4,
+  "minHealthFactor": 1.5,
+  "maxNotionalUsd": 250000,
+  "maxDataAgeMs": 120000
+}
