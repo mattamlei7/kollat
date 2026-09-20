@@ -1,4 +1,3 @@
-import { Mark } from "./Header";
 
 const README = "https://github.com/mattamlei7/borrow-router#readme";
 
@@ -14,7 +13,7 @@ export function Footer() {
     <footer className="site-footer">
       <div className="wrap">
         <div className="grid">
-          <div><Mark /></div>
+          <div className="brand">Kollat</div>
           {COLS.map((c) => (
             <div key={c.title}>
               <h4>{c.title}</h4>
