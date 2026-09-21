@@ -34,6 +34,8 @@ export interface Sim {
   cols: Column[];
   max: number;
   amount: number;
+  /** A capacity comparison only, not a policy approval or executable quote. */
+  withinCapacity: boolean;
   hf: number;
   band: RiskBand;
   liq: number;
@@ -70,8 +72,8 @@ export function foldable(positions: PositionView[] | null, chainId: number, prot
   );
 }
 
-export function simulate(tables: ChainTable[], sel: Selection | null, frac: number, positions: PositionView[] | null = null): Sim | null {
-  if (!sel) return null;
+export function simulate(tables: ChainTable[], sel: Selection | null, amount: number, positions: PositionView[] | null = null): Sim | null {
+  if (!sel || !Number.isFinite(amount) || amount < 0) return null;
   const table = tables.find((t) => t.chainId === sel.chainId);
   const row = table?.rows.find((r) => rowKeyOf(r) === sel.rowKey);
   if (!table || !row) return null;
@@ -81,7 +83,7 @@ export function simulate(tables: ChainTable[], sel: Selection | null, frac: numb
   const cell = row.cells[col.key] as CapacityCell;
   const { market, capacity, rate } = cell;
   const max = capacity.maxBorrowUsd;
-  const amount = max * frac;
+  const withinCapacity = amount <= max;
   // Collateral the protocol would accept (a supply cap can take less than the wallet holds).
   const units = Math.min(row.holding.units, capacity.collateralUsd / market.collateralPriceUsd);
   const existing = foldable(positions, table.chainId, col.id, market.id);
@@ -100,7 +102,9 @@ export function simulate(tables: ChainTable[], sel: Selection | null, frac: numb
   if (apy !== null) {
     for (const c of cols) {
       if (c.key === col.key) continue;
-      const r = (row.cells[c.key] as CapacityCell).rate;
+      const candidate = row.cells[c.key] as CapacityCell;
+      if (candidate.capacity.maxBorrowUsd < amount || c.error || c.stale) continue;
+      const r = candidate.rate;
       if (!r || r.borrowApyVariable >= apy) continue;
       if (!cheaper || r.borrowApyVariable < apy - cheaper.bps / 10_000) {
         cheaper = { col: c, bps: Math.round((apy - r.borrowApyVariable) * 10_000), saving: annualCostDelta(amount, apy, r.borrowApyVariable) };
@@ -109,7 +113,7 @@ export function simulate(tables: ChainTable[], sel: Selection | null, frac: numb
   }
 
   return {
-    table, row, col, cell, cols, max, amount, hf, existingDebt,
+    table, row, col, cell, cols, max, amount, withinCapacity, hf, existingDebt,
     band: riskBand(hf),
     liq,
     dist: distanceToLiquidation(market.collateralPriceUsd, liq),
@@ -124,8 +128,7 @@ interface RailProps {
   /** Shown when there is nothing to simulate. */
   hint: string;
   positions: PositionView[] | null;
-  frac: number;
-  onFrac: (f: number) => void;
+  onAmount: (amount: number) => void;
   onSelect: (s: Selection) => void;
   view: RailView;
   onView: (v: RailView) => void;
@@ -137,7 +140,7 @@ export function Rail(props: RailProps) {
   return <Simulator key="sim" {...props} />;
 }
 
-function Simulator({ sim, hint, positions, frac, onFrac, onSelect, onView }: RailProps) {
+function Simulator({ sim, hint, positions, onAmount, onSelect, onView }: RailProps) {
   const band = sim?.band ?? "none";
   const t = tone(band);
   const sym = sim?.row.holding.token.symbol;
@@ -162,8 +165,8 @@ function Simulator({ sim, hint, positions, frac, onFrac, onSelect, onView }: Rai
       {/* Health factor: the price block. */}
       <div>
         <div className="flex items-center justify-between">
-          <span className="text-t2"><Def term="hf">Health factor</Def></span>
-          <BandChip band={band} />
+          <span className="text-t2">{!sim.withinCapacity && "Hypothetical "}<Def term="hf">Health factor</Def></span>
+          {sim.withinCapacity && <BandChip band={band} />}
         </div>
         <div className="mt-1">
           <HealthFactor value={sim.hf} size="hero" />
@@ -172,7 +175,7 @@ function Simulator({ sim, hint, positions, frac, onFrac, onSelect, onView }: Rai
           {sim.liq > 0 ? `↘ ${drop} in ${sym} to liquidation` : "No debt at this amount"}
         </p>
         <p className="sr-only" aria-live="polite" aria-atomic="true">
-          Health factor {sim.hf === Infinity ? "no debt" : sim.hf.toFixed(2)}, {bandLabel(band)}
+          {!sim.withinCapacity && "Hypothetical "}Health factor {sim.hf === Infinity ? "no debt" : sim.hf.toFixed(2)}, {bandLabel(band)}
         </p>
       </div>
 
@@ -185,7 +188,11 @@ function Simulator({ sim, hint, positions, frac, onFrac, onSelect, onView }: Rai
           value={sim.col.key}
           onChange={(e) => onSelect({ chainId: sim.table.chainId, rowKey: rowKeyOf(sim.row), colKey: e.target.value })}
         >
-          {sim.cols.map((c) => <option key={c.key} value={c.key}>{c.name}</option>)}
+          {sim.cols.map((c) => (
+            <option key={c.key} value={c.key}>
+              {c.name}{(sim.row.cells[c.key] as CapacityCell).capacity.maxBorrowUsd < sim.amount ? " — below requested amount" : ""}
+            </option>
+          ))}
         </select>
         <label className="sr-only" htmlFor="sim-asset">Collateral</label>
         <select
@@ -209,39 +216,50 @@ function Simulator({ sim, hint, positions, frac, onFrac, onSelect, onView }: Rai
 
       {/* Amount entry. */}
       <div>
-        <label className="sr-only" htmlFor="sim-amount">Borrow amount in USDC</label>
+        <label className="label-strong text-t2" htmlFor="sim-amount">I want to borrow (USDC)</label>
         <div className="flex items-end justify-between gap-3">
           <div className="amount">
             <input
               id="sim-amount"
               type="number"
-              inputMode="numeric"
+              inputMode="decimal"
               min={0}
-              max={Math.round(sim.max)}
-              step={100}
+              step="any"
               className="num"
-              value={Math.round(sim.amount)}
-              onChange={(e) => onFrac(clamp(Number(e.target.value) / sim.max))}
+              value={sim.amount}
+              aria-invalid={!sim.withinCapacity}
+              aria-describedby="sim-capacity"
+              onChange={(e) => {
+                const amount = Number(e.target.value);
+                if (Number.isFinite(amount) && amount >= 0) onAmount(amount);
+              }}
             />
             <span className="unit">USDC</span>
           </div>
-          <button type="button" className="btn btn-soft" onClick={() => onFrac(1)}>
+          <button type="button" className="btn btn-soft" onClick={() => onAmount(sim.max)}>
             Max
           </button>
         </div>
         <input
           type="range"
           min={0}
-          max={1000}
-          step={5}
-          value={Math.round(frac * 1000)}
-          aria-label="Borrow amount"
-          aria-valuetext={usd(sim.amount)}
-          onChange={(e) => onFrac(Number(e.target.value) / 1000)}
+          max={sim.max}
+          step="any"
+          value={Math.min(sim.amount, sim.max)}
+          disabled={sim.max <= 0}
+          aria-label="Adjust amount within this option’s limit"
+          aria-valuetext={usd(Math.min(sim.amount, sim.max), { cents: true })}
+          aria-describedby="sim-capacity"
+          onChange={(e) => onAmount(Number(e.target.value))}
         />
         <p className="label-strong hue-primary">
           ⇅ {usd(sim.max)} max at <Def term="ltv" right>{pct(sim.cell.market.ltv, 0)} LTV</Def>
           {sim.cell.capacity.cappedByLiquidity ? " · capped by the market" : ""}
+        </p>
+        <p id="sim-capacity" className={`mt-2 text-sm ${sim.withinCapacity ? "text-t2" : "hue-danger"}`} aria-live="polite">
+          {sim.withinCapacity
+            ? "Your amount stays the same when you compare options. Capacity is an estimate, not loan approval."
+            : `${sim.col.name} cannot support your requested ${usd(sim.amount, { cents: true })} with this collateral. Estimated maximum: ${usd(sim.max, { cents: true })}. Choose another option or lower the amount; your request has not been changed.`}
         </p>
       </div>
 
@@ -271,7 +289,7 @@ function Simulator({ sim, hint, positions, frac, onFrac, onSelect, onView }: Rai
               {sim.cheaper ? (
                 <span className="hue-safe">↗ {sim.cheaper.col.name} is {sim.cheaper.bps} bps cheaper · saves {usd(sim.cheaper.saving)} a year</span>
               ) : (
-                `Cheapest of ${sim.cols.length} protocol${sim.cols.length === 1 ? "" : "s"} for ${sym}`
+                "Indicative borrowing cost; excludes transaction fees"
               )}
             </span>
           </span>
@@ -279,15 +297,21 @@ function Simulator({ sim, hint, positions, frac, onFrac, onSelect, onView }: Rai
         </button>
       </div>
 
-      <a
-        className="btn btn-primary btn-cta"
-        href={PROTOCOL_URL[sim.col.id] ?? "#"}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Open {sim.col.name}
-        <Icon name="external" className="w-5 h-5" />
-      </a>
+      {sim.withinCapacity && sim.amount > 0 ? (
+        <a
+          className="btn btn-primary btn-cta"
+          href={PROTOCOL_URL[sim.col.id] ?? "#"}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Open {sim.col.name}
+          <Icon name="external" className="w-5 h-5" />
+        </a>
+      ) : (
+        <button type="button" className="btn btn-primary btn-cta" disabled>
+          {sim.amount === 0 ? "Enter a borrow amount" : "Amount exceeds this option’s limit"}
+        </button>
+      )}
 
       <Narrative sim={sim} positions={positions} />
     </div>
@@ -295,6 +319,9 @@ function Simulator({ sim, hint, positions, frac, onFrac, onSelect, onView }: Rai
 }
 
 function Narrative({ sim }: { sim: Sim; positions: PositionView[] | null }) {
+  if (!sim.withinCapacity) {
+    return <p className="hair-t pt-5 text-t2">The figures above illustrate your requested amount, not an available loan. This simulator does not sign or move funds.</p>;
+  }
   const sym = sim.row.holding.token.symbol;
   const drop = pct(Math.max(0, -sim.dist), 1);
   const penalty = pct(sim.cell.market.liquidationPenalty, 1);
@@ -372,5 +399,3 @@ function Line({ label, children }: { label: React.ReactNode; children: React.Rea
     </div>
   );
 }
-
-const clamp = (n: number) => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0);

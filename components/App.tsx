@@ -17,7 +17,8 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
   const [input, setInput] = useState<string | null>(initialInput);
   const [chain, setChain] = useState<ChainParam>(initialChain);
   const [picked, setPicked] = useState<Selection | null>(null);
-  const [frac, setFrac] = useState(0.5);
+  // Borrower intent stays fixed across route changes and refreshed capacity data.
+  const [borrowAmount, setBorrowAmount] = useState(5_000);
   const [view, setView] = useState<RailView>("sim");
 
   // Keep the URL shareable: ?a=<address>&chain=<id>
@@ -40,7 +41,7 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
   const stats = useMemo(() => summarize(tables), [tables]);
 
   // The picked cell may not exist for a new address; fall back to the first borrowable holding.
-  const sim = useMemo(() => simulate(tables, picked, frac, positions?.positions) ?? simulate(tables, defaultSelection(tables), frac, positions?.positions), [tables, picked, frac, positions]);
+  const sim = useMemo(() => simulate(tables, picked, borrowAmount, positions?.positions) ?? simulate(tables, defaultSelection(tables), borrowAmount, positions?.positions), [tables, picked, borrowAmount, positions]);
   const selection: Selection | null = sim ? { chainId: sim.table.chainId, rowKey: sim.row.holding.token.address.toLowerCase(), colKey: sim.col.key } : null;
   const simTone = tone(sim?.band ?? "none");
 
@@ -206,8 +207,7 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
                 : "Pick a holding in the table to simulate borrowing against it."
           }
           positions={positions?.positions ?? null}
-          frac={frac}
-          onFrac={setFrac}
+          onAmount={setBorrowAmount}
           onSelect={select}
           view={view}
           onView={setView}
