@@ -10,7 +10,7 @@ build order in the strategy notes. The thesis and invariants in both still hold.
 
 ## 1. Executive assessment
 
-**End goal (verbatim; the `product-alignment` agent in `.claude/agents/` checks work against this):**
+**End goal (verbatim; canonical copy in `PRODUCT_GOAL.md`, checked by the `product-alignment` agent):**
 
 > Kollat's end goal is to make it easy for ordinary people to borrow against their crypto
 > through the wallets and exchanges they already use.

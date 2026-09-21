@@ -1,7 +1,18 @@
-# Borrow Router / Kollat: product north star
+# Kollat (formerly Borrow Router): product north star
 
-Owner's clarification, 2026-09-20. Borrow Router and the Kollat name in the repository
-refer to this project; this document does not authorize a branding change.
+Owner's statement, 2026-09-20, verbatim — this is the reference; everything below interprets it:
+
+> Borrow Router's end goal is to make it easy for ordinary people to borrow against their
+> crypto through the wallets and exchanges they already use.
+>
+> A user should be able to say, "I want to borrow $5,000 without selling my crypto," and
+> have their existing app help them understand their options, choose a suitable borrowing
+> route, and complete the loan — with clear costs and liquidation risks.
+>
+> Policy checks, monitoring, and audit records are supporting infrastructure — not the end
+> product or the reason users care.
+
+The product was renamed Kollat on 2026-09-20; repo and host URLs still say borrow-router.
 
 ## The end job
 
