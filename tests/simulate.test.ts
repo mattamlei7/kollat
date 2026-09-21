@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Rail, simulate } from "../components/Rail";
+import { hf } from "../lib/format";
 import type { ChainTable, PositionView } from "../lib/join";
 
 // Minimal fixture: 10 WETH on one protocol. Only the fields simulate() reads are real.
@@ -152,5 +153,20 @@ describe("fixed requested borrow amount", () => {
     expect(renderSimulator(5_000)).toContain("Open Spark");
     expect(renderSimulator(5_000, 0)).not.toContain("Open Spark");
     expect(renderSimulator(5_000, 0)).toContain("Enter a borrow amount");
+  });
+
+  it("caps the displayed USDC amount at two decimals without rounding simulation inputs", () => {
+    const amount = 1_234.567891;
+    const html = renderSimulator(5_000, amount);
+    const input = html.match(/<input[^>]*id="sim-amount"[^>]*>/)?.[0];
+    expect(input).toContain('value="1234.57"');
+    const result = simulate([table], sel, amount)!;
+    expect(result.amount).toBe(amount);
+    expect(result.hf).toBeCloseTo((10 * 2500 * 0.83) / amount, 10);
+  });
+
+  it("keeps health-factor displays at the hundredth place", () => {
+    expect(hf(1.23456789)).toBe("1.23");
+    expect(hf(1.99999999)).toBe("2.00");
   });
 });

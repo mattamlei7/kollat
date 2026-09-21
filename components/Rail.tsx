@@ -226,7 +226,7 @@ function Simulator({ sim, hint, positions, onAmount, onSelect, onView }: RailPro
               min={0}
               step="any"
               className="num"
-              value={sim.amount}
+              value={Number(sim.amount.toFixed(2))}
               aria-invalid={!sim.withinCapacity}
               aria-describedby="sim-capacity"
               onChange={(e) => {
