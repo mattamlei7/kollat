@@ -1,0 +1,6 @@
+interface:
+  display_name: "Borrow Router Product Alignment"
+  short_description: "Check work against the embedded borrowing goal"
+  default_prompt: "Use $product-alignment to review proposed work against PRODUCT_GOAL.md and identify drift, timing, and the next useful step."
+policy:
+  allow_implicit_invocation: true
