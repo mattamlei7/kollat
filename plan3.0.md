@@ -10,11 +10,23 @@ build order in the strategy notes. The thesis and invariants in both still hold.
 
 ## 1. Executive assessment
 
-**End goal:** make getting a collateral-backed loan easier for ordinary users — through the
-wallets and exchanges they already use, not through another app. Everything below is the
-means to that. A partner buys safety and an audit trail; the user gets a borrow that is
-clearer and less frightening than today. If a feature serves the buyer but not the user,
-it is off-goal.
+**End goal (verbatim; the `northstar` agent in `.claude/agents/` checks work against this):**
+
+> Kollat's end goal is to make it easy for ordinary people to borrow against their crypto
+> through the wallets and exchanges they already use.
+>
+> A user should be able to say, "I want to borrow $5,000 without selling my crypto," and have
+> their existing app help them understand their options, choose a suitable borrowing route,
+> and complete the loan — with clear costs and liquidation risks.
+>
+> Policy checks, monitoring, and audit records are supporting infrastructure — not the end
+> product or the reason users care.
+
+Everything below is the means to that. A partner buys safety and an audit trail; the user
+gets a borrow that is clearer and less frightening than today. If a feature serves the buyer
+but not the user, it is off-goal. "Complete the loan" is part of the goal: execution is
+optional per partner, not optional for the product — if the partner cannot complete the loan
+with its own tooling, Kollat supplies it (§6.6, Phase 4).
 
 Kollat should become a B2B risk-control and integration service for wallets,
 custodians, crypto neobanks, and exchanges that want to expose onchain borrowing without
