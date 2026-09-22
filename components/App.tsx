@@ -44,6 +44,15 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
   const sim = useMemo(() => simulate(tables, picked, borrowAmount, positions?.positions) ?? simulate(tables, defaultSelection(tables), borrowAmount, positions?.positions), [tables, picked, borrowAmount, positions]);
   const selection: Selection | null = sim ? { chainId: sim.table.chainId, rowKey: sim.row.holding.token.address.toLowerCase(), colKey: sim.col.key } : null;
   const simTone = tone(sim?.band ?? "none");
+  const selectedAccount = account.data?.protocols.find((p) => p.chainId === sim?.table.chainId && p.id === sim?.col.id);
+  const selectedMarket = markets.data?.protocols.find((p) => p.chainId === sim?.table.chainId && p.id === sim?.col.id);
+  const reviewReads = [selectedAccount?.capacity, selectedAccount?.positions, selectedMarket?.markets, selectedMarket?.rates];
+  const oldestReadAt = Math.min(...reviewReads.map((r) => r?.ok ? r.fetchedAt : 0));
+  const reviewUnavailable = account.loading || markets.loading
+    ? "Refreshing the estimate…"
+    : account.error || markets.error || account.data?.input.toLowerCase() !== input?.toLowerCase() || reviewReads.some((r) => !r?.ok || r.stale)
+      ? "Fresh account, position, and rate data are needed before reviewing. Read the account again."
+      : null;
 
   function select(s: Selection) {
     setPicked(s);
@@ -85,8 +94,8 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
           <AddressForm
             initial={input ?? ""}
             chain={chain}
-            onSubmit={setInput}
-            onChain={setChain}
+            onSubmit={(value) => { setInput(value); setView("sim"); }}
+            onChain={(value) => { setChain(value); setView("sim"); }}
             error={account.error}
             busy={account.loading}
           />
@@ -198,6 +207,7 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
 
       <aside className="rail" aria-label="Borrow simulator">
         <Rail
+          key={`${input}:${chain}`}
           sim={sim}
           hint={
             !account.data
@@ -211,6 +221,8 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
           onSelect={select}
           view={view}
           onView={setView}
+          reviewUnavailable={reviewUnavailable}
+          oldestReadAt={oldestReadAt}
         />
       </aside>
     </div>

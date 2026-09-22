@@ -149,8 +149,10 @@ describe("fixed requested borrow amount", () => {
     expect(html).not.toContain("Open Spark");
   });
 
-  it("offers the existing protocol link within capacity, but not for zero", () => {
-    expect(renderSimulator(5_000)).toContain("Open Spark");
+  it("offers review before handoff within capacity, but not for zero", () => {
+    expect(renderSimulator(5_000)).toContain("Review borrow");
+    expect(renderSimulator(5_000)).not.toContain("Open Spark");
+    expect(renderSimulator(5_000)).toContain("Know before you borrow");
     expect(renderSimulator(5_000, 0)).not.toContain("Open Spark");
     expect(renderSimulator(5_000, 0)).toContain("Enter a borrow amount");
   });

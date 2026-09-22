@@ -24,3 +24,11 @@ For an explicit alignment check, use the `product-alignment` agent or the workfl
 `.agents/skills/product-alignment/SKILL.md`. If custom agents are unavailable, perform
 that review in the main thread. The reviewer advises; it does not change files or expand
 the task. Do not spawn it for every edit or treat its recommendation as owner approval.
+
+## Borrow screen visual baseline
+
+The owner’s preferred borrow-screen design is commit `e14d13f` (confirmed 2026-09-22).
+Preserve its font, three-column shell, navigation, holdings/protocol table, and right rail.
+Fit new interactions into that UI; do not restore the reverted card-based explorer or
+partner-demo redesign. Approved additions are “Know before you borrow” in the rail,
+“Review borrow,” and the slide-to-borrow preview. Broader layout changes need a new request.

@@ -1,6 +1,8 @@
 "use client";
 
-import { CHAIN_LABEL, PROTOCOL_URL } from "@/lib/client-types";
+import { useEffect, useState } from "react";
+import { CHAIN_LABEL } from "@/lib/client-types";
+import { BorrowReview, reviewIssue } from "./BorrowReview";
 import { amount as fmtAmount, pct, signedPct, timeAgo, usd } from "@/lib/format";
 import type { Cell, ChainTable, Column, PositionView, Row } from "@/lib/join";
 import { sharesHealthFactor } from "@/lib/protocols/types";
@@ -21,7 +23,7 @@ export interface Selection {
   rowKey: string;
   colKey: string;
 }
-export type RailView = "sim" | "params";
+export type RailView = "sim" | "params" | "review";
 
 type CapacityCell = Extract<Cell, { kind: "capacity" }>;
 
@@ -132,15 +134,27 @@ interface RailProps {
   onSelect: (s: Selection) => void;
   view: RailView;
   onView: (v: RailView) => void;
+  /** Required account/market reads, supplied by the public explorer. */
+  reviewUnavailable?: string | null;
+  oldestReadAt?: number;
 }
 
 export function Rail(props: RailProps) {
   const { sim, view } = props;
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    const first = setTimeout(() => setNow(Date.now()), 0);
+    const timer = setInterval(() => setNow(Date.now()), 15_000);
+    return () => { clearTimeout(first); clearInterval(timer); };
+  }, []);
+  const expired = props.oldestReadAt !== undefined && (!now || !Number.isFinite(props.oldestReadAt) || now - props.oldestReadAt > 15 * 60_000 || props.oldestReadAt > now + 30_000);
+  const unavailable = props.reviewUnavailable || (expired ? "Refresh the account to review an up-to-date estimate." : null);
+  if (sim && view === "review") return <BorrowReview sim={sim} unavailable={unavailable} onBack={() => props.onView("sim")} />;
   if (sim && view === "params") return <Params key="params" sim={sim} onBack={() => props.onView("sim")} />;
-  return <Simulator key="sim" {...props} />;
+  return <Simulator key="sim" {...props} reviewUnavailable={unavailable} />;
 }
 
-function Simulator({ sim, hint, positions, onAmount, onSelect, onView }: RailProps) {
+function Simulator({ sim, hint, positions, onAmount, onSelect, onView, reviewUnavailable }: RailProps) {
   const band = sim?.band ?? "none";
   const t = tone(band);
   const sym = sim?.row.holding.token.symbol;
@@ -265,6 +279,7 @@ function Simulator({ sim, hint, positions, onAmount, onSelect, onView }: RailPro
 
       {/* Summary rows. */}
       <div>
+        <h2 className="heading mb-3">Know before you borrow</h2>
         <button type="button" className="summary" onClick={() => onView("params")}>
           <span className="disc" data-tone={t}><Icon name="shield" /></span>
           <span className="text">
@@ -298,19 +313,22 @@ function Simulator({ sim, hint, positions, onAmount, onSelect, onView }: RailPro
       </div>
 
       {sim.withinCapacity && sim.amount > 0 ? (
-        <a
+        <button
+          type="button"
           className="btn btn-primary btn-cta"
-          href={PROTOCOL_URL[sim.col.id] ?? "#"}
-          target="_blank"
-          rel="noopener noreferrer"
+          disabled={!!reviewIssue(sim, reviewUnavailable)}
+          onClick={() => onView("review")}
         >
-          Open {sim.col.name}
-          <Icon name="external" className="w-5 h-5" />
-        </a>
+          Review borrow
+          <Icon name="chevron" className="w-5 h-5" />
+        </button>
       ) : (
         <button type="button" className="btn btn-primary btn-cta" disabled>
           {sim.amount === 0 ? "Enter a borrow amount" : "Amount exceeds this option’s limit"}
         </button>
+      )}
+      {sim.withinCapacity && sim.amount > 0 && reviewIssue(sim, reviewUnavailable) && (
+        <p className="text-t2" role="status">{reviewIssue(sim, reviewUnavailable)}</p>
       )}
 
       <Narrative sim={sim} positions={positions} />
