@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { AmountField } from "../components/AmountField";
 import { Rail, simulate } from "../components/Rail";
 import { hf } from "../lib/format";
 import type { ChainTable, PositionView } from "../lib/join";
@@ -139,14 +138,10 @@ describe("fixed requested borrow amount", () => {
     }));
   }
 
-  function renderAmount(amount: number, invalid = false) {
-    return renderToStaticMarkup(createElement(AmountField, { value: amount, invalid, onChange: () => {} }));
-  }
-
   it("renders an over-limit warning without changing the input or offering an external handoff", () => {
     const html = renderSimulator(3_000);
-    expect(renderAmount(5_000, true)).toContain('value="5000"');
-    expect(renderAmount(5_000, true)).toContain('aria-invalid="true"');
+    expect(html).toContain('value="5000"');
+    expect(html).toContain('aria-invalid="true"');
     expect(html).toContain("cannot support your requested $5,000.00");
     expect(html).toContain("Estimated maximum: $3,000.00");
     expect(html).toContain("below requested amount");
@@ -157,14 +152,14 @@ describe("fixed requested borrow amount", () => {
   it("offers review before handoff within capacity, but not for zero", () => {
     expect(renderSimulator(5_000)).toContain("Review borrow");
     expect(renderSimulator(5_000)).not.toContain("Open Spark");
-    expect(renderSimulator(5_000)).toContain("Know before you borrow");
+    expect(renderSimulator(5_000)).toContain("liquidator bonus");
     expect(renderSimulator(5_000, 0)).not.toContain("Open Spark");
     expect(renderSimulator(5_000, 0)).toContain("Enter a borrow amount");
   });
 
   it("caps the displayed USDC amount at two decimals without rounding simulation inputs", () => {
     const amount = 1_234.567891;
-    const input = renderAmount(amount).match(/<input[^>]*id="sim-amount"[^>]*>/)?.[0];
+    const input = renderSimulator(5_000, amount).match(/<input[^>]*id="sim-amount"[^>]*>/)?.[0];
     expect(input).toContain('value="1234.57"');
     const result = simulate([table], sel, amount)!;
     expect(result.amount).toBe(amount);

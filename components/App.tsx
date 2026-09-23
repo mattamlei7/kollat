@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AddressForm } from "@/components/AddressForm";
-import { AmountField } from "@/components/AmountField";
 import { CapacityTable } from "@/components/CapacityTable";
 import { Positions } from "@/components/Positions";
 import { Rail, defaultSelection, simulate, type RailView, type Selection } from "@/components/Rail";
@@ -83,7 +82,6 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
       <div className="main">
         <header className="topbar">
           <h1 className="display-sm">Borrow</h1>
-          <AmountField value={borrowAmount} invalid={!!sim && !sim.withinCapacity} onChange={setBorrowAmount} />
           <AddressForm
             initial={input ?? ""}
             chain={chain}

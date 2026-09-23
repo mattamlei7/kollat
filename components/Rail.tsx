@@ -202,6 +202,26 @@ function Simulator({ sim, hint, positions, onAmount, onSelect, onView, reviewUna
         </p>
       </div>
 
+      {/* Typed amount sits with the cost it drives; the slider below keeps it inside this option's limit. */}
+      <div>
+        <label className="label-strong text-t2" htmlFor="sim-amount">Borrow amount (USDC)</label>
+        <input
+          id="sim-amount"
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step="any"
+          className="ctl num w-full mt-1"
+          value={Number(sim.amount.toFixed(2))}
+          aria-invalid={!sim.withinCapacity}
+          aria-describedby="sim-capacity"
+          onChange={(e) => {
+            const amount = Number(e.target.value);
+            if (Number.isFinite(amount) && amount >= 0) onAmount(amount);
+          }}
+        />
+      </div>
+
       {/* Protocol + asset dropdowns (seven protocols no longer fit a segmented control in the rail). */}
       <div className="flex flex-col gap-2">
         <label className="sr-only" htmlFor="sim-protocol">Protocol</label>
@@ -270,7 +290,6 @@ function Simulator({ sim, hint, positions, onAmount, onSelect, onView, reviewUna
 
       {/* Summary rows. */}
       <div>
-        <h2 className="heading mb-3">Know before you borrow</h2>
         <button type="button" className="summary" onClick={() => onView("params")}>
           <span className="disc" data-tone={t}><Icon name="shield" /></span>
           <span className="text">
@@ -289,7 +308,7 @@ function Simulator({ sim, hint, positions, onAmount, onSelect, onView, reviewUna
           <span className="text">
             <span className="title num">
               {sim.cheaper ? (
-                <span className="hue-safe">↗ {sim.cheaper.col.name} is {sim.cheaper.bps} bps cheaper</span>
+                <span className="hue-safe">↗ {sim.cheaper.col.name} is {pct(sim.cheaper.bps / 10_000, 2)} cheaper</span>
               ) : (
                 "Variable rate"
               )}
