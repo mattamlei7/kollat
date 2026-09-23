@@ -176,17 +176,26 @@ function Simulator({ sim, hint, positions, onAmount, onSelect, onView, reviewUna
 
   return (
     <div className="rail-view flex flex-col gap-6">
-      {/* Health factor: the price block. */}
+      {/* What the loan costs and where it breaks. Health factor is a supporting figure, not the headline. */}
       <div>
         <div className="flex items-center justify-between">
-          <span className="text-t2">{!sim.withinCapacity && "Hypothetical "}<Def term="hf">Health factor</Def></span>
+          <span className="text-t2">{!sim.withinCapacity && "Hypothetical "}Cost to borrow</span>
           {sim.withinCapacity && <BandChip band={band} />}
         </div>
-        <div className="mt-1">
-          <HealthFactor value={sim.hf} size="hero" />
+        <div className="mt-1 num display-md">
+          {sim.costPerYear === null ? "—" : usd(sim.costPerYear / 12, { cents: true })}
+          <span className="body text-t2"> a month</span>
         </div>
-        <p className={`mt-1 body ${sim.liq > 0 ? hueClass(band) : "text-t2"}`}>
-          {sim.liq > 0 ? `↘ ${drop} in ${sym} to liquidation` : "No debt at this amount"}
+        <p className="mt-1 body text-t2">
+          {sim.apy === null ? "Rate unavailable" : <>{pct(sim.apy)} <Def term="apy">APY</Def> · {usd(sim.costPerYear ?? 0)} a year</>}
+        </p>
+        <p className={`mt-3 body ${sim.liq > 0 ? hueClass(band) : "text-t2"}`}>
+          {sim.liq > 0
+            ? <><Def term="liq">Liquidation</Def> at {usd(sim.liq, { cents: true })} — {sym} falls {drop}</>
+            : "No debt at this amount"}
+        </p>
+        <p className="mt-2 flex items-center gap-2 text-t2">
+          <Def term="hf">Health factor</Def> <HealthFactor value={sim.hf} size="base" />
         </p>
         <p className="sr-only" aria-live="polite" aria-atomic="true">
           {!sim.withinCapacity && "Hypothetical "}Health factor {sim.hf === Infinity ? "no debt" : sim.hf.toFixed(2)}, {bandLabel(band)}
@@ -254,7 +263,7 @@ function Simulator({ sim, hint, positions, onAmount, onSelect, onView, reviewUna
         </p>
         <p id="sim-capacity" className={`mt-2 text-sm ${sim.withinCapacity ? "text-t2" : "hue-danger"}`} aria-live="polite">
           {sim.withinCapacity
-            ? "Your amount stays the same when you compare options. Capacity is an estimate, not loan approval."
+            ? "An estimate, not loan approval."
             : `${sim.col.name} cannot support your requested ${usd(sim.amount, { cents: true })} with this collateral. Estimated maximum: ${usd(sim.max, { cents: true })}. Choose another option or lower the amount; your request has not been changed.`}
         </p>
       </div>
@@ -265,12 +274,12 @@ function Simulator({ sim, hint, positions, onAmount, onSelect, onView, reviewUna
         <button type="button" className="summary" onClick={() => onView("params")}>
           <span className="disc" data-tone={t}><Icon name="shield" /></span>
           <span className="text">
-            <span className={`title num ${hueClass(band)}`}>
-              <Def term="liq">Liquidation</Def> {sim.liq > 0 ? usd(sim.liq, { cents: true }) : "—"}
+            <span className="title num">
+              {sym} now {usd(sim.cell.market.collateralPriceUsd, { cents: true })}
+              {sim.liq > 0 ? <span className={`font-normal ${hueClass(band)}`}> · {signedPct(sim.dist, 1)}</span> : ""}
             </span>
             <span className="subtitle num">
-              {sym} now {usd(sim.cell.market.collateralPriceUsd, { cents: true })}
-              {sim.liq > 0 ? ` · ${signedPct(sim.dist, 1)}` : ""} · LT {pct(sim.cell.market.liquidationThreshold, 1)}
+              <Def term="lt">Liquidation threshold</Def> {pct(sim.cell.market.liquidationThreshold, 1)} · liquidator bonus {pct(sim.cell.market.liquidationPenalty, 1)}
             </span>
           </span>
           <span className="chev"><Icon name="chevron" /></span>
@@ -279,15 +288,16 @@ function Simulator({ sim, hint, positions, onAmount, onSelect, onView, reviewUna
           <span className="disc"><Icon name="percent" /></span>
           <span className="text">
             <span className="title num">
-              {sim.apy === null ? "—" : pct(sim.apy)} <Def term="apy">APY</Def>
-              <span className="text-t2 font-normal"> · {sim.costPerYear === null ? "—" : `${usd(sim.costPerYear)} a year`}</span>
+              {sim.cheaper ? (
+                <span className="hue-safe">↗ {sim.cheaper.col.name} is {sim.cheaper.bps} bps cheaper</span>
+              ) : (
+                "Variable rate"
+              )}
             </span>
             <span className="subtitle num">
-              {sim.cheaper ? (
-                <span className="hue-safe">↗ {sim.cheaper.col.name} is {sim.cheaper.bps} bps cheaper · saves {usd(sim.cheaper.saving)} a year</span>
-              ) : (
-                "Indicative borrowing cost; excludes transaction fees"
-              )}
+              {sim.cheaper
+                ? `Saves ${usd(sim.cheaper.saving)} a year on the same amount`
+                : "Changes with the market · excludes transaction fees"}
             </span>
           </span>
           <span className="chev"><Icon name="chevron" /></span>
