@@ -155,6 +155,8 @@ describe("fixed requested borrow amount", () => {
     expect(renderSimulator(5_000)).toContain("liquidator bonus");
     expect(renderSimulator(5_000, 0)).not.toContain("Open Spark");
     expect(renderSimulator(5_000, 0)).toContain("Enter a borrow amount");
+    // Zero shows an empty field, so typing a digit does not append to a leading 0.
+    expect(renderSimulator(5_000, 0)).toContain('value=""');
   });
 
   it("caps the displayed USDC amount at two decimals without rounding simulation inputs", () => {

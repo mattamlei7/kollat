@@ -212,10 +212,13 @@ function Simulator({ sim, hint, positions, onAmount, onSelect, onView, reviewUna
           min={0}
           step="any"
           className="ctl num w-full mt-1"
-          value={Number(sim.amount.toFixed(2))}
+          placeholder="0"
+          // Empty at zero, so the first digit typed replaces nothing.
+          value={sim.amount === 0 ? "" : Number(sim.amount.toFixed(2))}
           aria-invalid={!sim.withinCapacity}
           aria-describedby="sim-capacity"
           onChange={(e) => {
+            if (e.target.value === "") return onAmount(0);
             const amount = Number(e.target.value);
             if (Number.isFinite(amount) && amount >= 0) onAmount(amount);
           }}
