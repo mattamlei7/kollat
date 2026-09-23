@@ -8,7 +8,6 @@ export function AmountField({ value, invalid, onChange }: { value: number; inval
   return (
     <div className="amount-pill">
       <label className="sr-only" htmlFor="sim-amount">Amount to borrow in USDC</label>
-      <span className="prefix">I want to borrow</span>
       <input
         id="sim-amount"
         type="number"
