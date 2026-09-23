@@ -24,7 +24,14 @@ const CHAINS: { value: ChainParam; label: string }[] = [
 ];
 
 /** Address or ENS input styled as the top-bar search pill. Submits on Enter only. */
-export function AddressForm({ initial, chain, onSubmit, onChain, error, busy }: Props) {
+export function AddressForm({
+  initial,
+  chain,
+  onSubmit,
+  onChain,
+  error,
+  busy,
+}: Props) {
   const [value, setValue] = useState(initial);
   const [walletError, setWalletError] = useState<string | null>(null);
 
@@ -36,7 +43,11 @@ export function AddressForm({ initial, chain, onSubmit, onChain, error, busy }: 
 
   async function useWallet() {
     setWalletError(null);
-    const eth = (window as unknown as { ethereum?: { request: (a: { method: string }) => Promise<string[]> } }).ethereum;
+    const eth = (
+      window as unknown as {
+        ethereum?: { request: (a: { method: string }) => Promise<string[]> };
+      }
+    ).ethereum;
     if (!eth) {
       setWalletError("No wallet detected in this browser.");
       return;
@@ -56,34 +67,52 @@ export function AddressForm({ initial, chain, onSubmit, onChain, error, busy }: 
   const msg = error ?? walletError;
 
   return (
-    <form onSubmit={submit} className="contents">
-      <div className="search">
-        <Icon name="search" />
-        <label className="sr-only" htmlFor="address">
-          Ethereum address or ENS name
+    <form onSubmit={submit} className="topbar-form">
+      <div className="topbar-controls">
+        <div className="search">
+          <Icon name="search" />
+          <label className="sr-only" htmlFor="address">
+            Ethereum address or ENS name
+          </label>
+          <input
+            id="address"
+            name="address"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="Search an address or name.eth"
+            spellCheck={false}
+            autoComplete="off"
+            autoCapitalize="off"
+            className="num"
+          />
+        </div>
+        <label className="sr-only" htmlFor="chain-select">
+          Chain
         </label>
-        <input
-          id="address"
-          name="address"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="Search an address or name.eth"
-          spellCheck={false}
-          autoComplete="off"
-          autoCapitalize="off"
-          className="num"
-        />
+        <select
+          id="chain-select"
+          className="ctl"
+          value={chain}
+          onChange={(e) => onChain(e.target.value as ChainParam)}
+        >
+          {CHAINS.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+        <button type="submit" disabled={busy} className="btn btn-primary">
+          {busy ? "Reading…" : "Read"}
+        </button>
+        <button
+          type="button"
+          onClick={useWallet}
+          className="btn btn-quiet"
+          title="Reads your wallet address only. Nothing is signed."
+        >
+          Use wallet
+        </button>
       </div>
-      <label className="sr-only" htmlFor="chain-select">Chain</label>
-      <select id="chain-select" className="ctl" value={chain} onChange={(e) => onChain(e.target.value as ChainParam)}>
-        {CHAINS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-      </select>
-      <button type="submit" disabled={busy} className="btn btn-primary">
-        {busy ? "Reading…" : "Read"}
-      </button>
-      <button type="button" onClick={useWallet} className="btn btn-quiet" title="Reads your wallet address only. Nothing is signed.">
-        Use wallet
-      </button>
       {msg && (
         <p role="alert" className="basis-full text-t2 label-strong hue-danger">
           {msg}

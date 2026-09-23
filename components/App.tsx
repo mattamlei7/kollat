@@ -4,21 +4,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AddressForm } from "@/components/AddressForm";
+import { AmountField } from "@/components/AmountField";
 import { CapacityTable } from "@/components/CapacityTable";
 import { Positions } from "@/components/Positions";
 import { Rail, defaultSelection, simulate, type RailView, type Selection } from "@/components/Rail";
 import { EmptyState, SkeletonRows } from "@/components/States";
 import { Icon, tone } from "@/components/ui";
 import { useAccount, useMarkets, type ChainParam } from "@/hooks/useSnapshot";
-import { pct, shortAddress, timeAgo, usd } from "@/lib/format";
-import { buildChainTables, collectPositions, type ChainTable } from "@/lib/join";
+import { shortAddress, timeAgo } from "@/lib/format";
+import { buildChainTables, collectPositions } from "@/lib/join";
 
 export function App({ initialInput, initialChain }: { initialInput: string | null; initialChain: ChainParam }) {
   const [input, setInput] = useState<string | null>(initialInput);
   const [chain, setChain] = useState<ChainParam>(initialChain);
   const [picked, setPicked] = useState<Selection | null>(null);
   // Borrower intent stays fixed across route changes and refreshed capacity data.
-  const [borrowAmount, setBorrowAmount] = useState(5_000);
+  const [borrowAmount, setBorrowAmount] = useState(0);
   const [view, setView] = useState<RailView>("sim");
 
   // Keep the URL shareable: ?a=<address>&chain=<id>
@@ -38,7 +39,6 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
     [markets.data, account.data],
   );
   const positions = useMemo(() => (account.data ? collectPositions(account.data) : null), [account.data]);
-  const stats = useMemo(() => summarize(tables), [tables]);
 
   // The picked cell may not exist for a new address; fall back to the first borrowable holding.
   const sim = useMemo(() => simulate(tables, picked, borrowAmount, positions?.positions) ?? simulate(tables, defaultSelection(tables), borrowAmount, positions?.positions), [tables, picked, borrowAmount, positions]);
@@ -72,14 +72,6 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
             <Icon name="borrow" />
             Borrow
           </Link>
-          <a className="nav-item" href="#positions">
-            <Icon name="positions" />
-            Positions
-          </a>
-          <a className="nav-item" href="#protocols">
-            <Icon name="home" />
-            Protocols
-          </a>
         </div>
         <div className="pinned nav-item" title="This app never requests a signature and has no write path.">
           <Icon name="lock" />
@@ -91,6 +83,7 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
       <div className="main">
         <header className="topbar">
           <h1 className="display-sm">Borrow</h1>
+          <AmountField value={borrowAmount} invalid={!!sim && !sim.withinCapacity} onChange={setBorrowAmount} />
           <AddressForm
             initial={input ?? ""}
             chain={chain}
@@ -145,31 +138,6 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
                   {account.loading ? "Refreshing…" : account.fetchedAt ? `Read ${timeAgo(account.fetchedAt)}` : ""}
                 </span>
               </div>
-
-              {!emptyEverywhere && (
-                <div className="row mt-4 tiles">
-                  <div className="tile">
-                    <div className="label">Collateral value</div>
-                    <div className="value num">{usd(stats.value)}</div>
-                  </div>
-                  <div className="tile">
-                    <div className="label">Max USDC, best protocol per asset</div>
-                    <div className="value num">{usd(stats.maxBorrow)}</div>
-                  </div>
-                  <div className="tile">
-                    <div className="label">Lowest borrow APY</div>
-                    <div className="value num">
-                      {stats.lowestApy ? (
-                        <>
-                          {pct(stats.lowestApy.apy)} <span className="label-strong text-t2">{stats.lowestApy.name}</span>
-                        </>
-                      ) : (
-                        "—"
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div className="mt-6">
                 {emptyEverywhere ? (
@@ -227,23 +195,4 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
       </aside>
     </div>
   );
-}
-
-function summarize(tables: ChainTable[]) {
-  let value = 0;
-  let maxBorrow = 0;
-  let lowestApy: { apy: number; name: string } | null = null;
-  for (const t of tables) {
-    for (const r of t.rows) {
-      value += r.holding.usd;
-      const best = r.best ? r.cells[r.best] : null;
-      if (best?.kind === "capacity") maxBorrow += best.capacity.maxBorrowUsd;
-      for (const c of t.columns) {
-        const cell = r.cells[c.key];
-        if (cell?.kind !== "capacity" || !cell.rate) continue;
-        if (!lowestApy || cell.rate.borrowApyVariable < lowestApy.apy) lowestApy = { apy: cell.rate.borrowApyVariable, name: c.name };
-      }
-    }
-  }
-  return { value, maxBorrow, lowestApy };
 }

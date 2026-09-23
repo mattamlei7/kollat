@@ -228,44 +228,26 @@ function Simulator({ sim, hint, positions, onAmount, onSelect, onView, reviewUna
         </select>
       </div>
 
-      {/* Amount entry. */}
+      {/* Amount is entered in the top bar; the rail adjusts it within this option's limit. */}
       <div>
-        <label className="label-strong text-t2" htmlFor="sim-amount">I want to borrow (USDC)</label>
-        <div className="flex items-end justify-between gap-3">
-          <div className="amount">
-            <input
-              id="sim-amount"
-              type="number"
-              inputMode="decimal"
-              min={0}
-              step="any"
-              className="num"
-              value={Number(sim.amount.toFixed(2))}
-              aria-invalid={!sim.withinCapacity}
-              aria-describedby="sim-capacity"
-              onChange={(e) => {
-                const amount = Number(e.target.value);
-                if (Number.isFinite(amount) && amount >= 0) onAmount(amount);
-              }}
-            />
-            <span className="unit">USDC</span>
-          </div>
+        <div className="flex items-center gap-3">
+          <input
+            className="flex-1"
+            type="range"
+            min={0}
+            max={sim.max}
+            step="any"
+            value={Math.min(sim.amount, sim.max)}
+            disabled={sim.max <= 0}
+            aria-label="Adjust amount within this option’s limit"
+            aria-valuetext={usd(Math.min(sim.amount, sim.max), { cents: true })}
+            aria-describedby="sim-capacity"
+            onChange={(e) => onAmount(Number(e.target.value))}
+          />
           <button type="button" className="btn btn-soft" onClick={() => onAmount(sim.max)}>
             Max
           </button>
         </div>
-        <input
-          type="range"
-          min={0}
-          max={sim.max}
-          step="any"
-          value={Math.min(sim.amount, sim.max)}
-          disabled={sim.max <= 0}
-          aria-label="Adjust amount within this option’s limit"
-          aria-valuetext={usd(Math.min(sim.amount, sim.max), { cents: true })}
-          aria-describedby="sim-capacity"
-          onChange={(e) => onAmount(Number(e.target.value))}
-        />
         <p className="label-strong hue-primary">
           ⇅ {usd(sim.max)} max at <Def term="ltv" right>{pct(sim.cell.market.ltv, 0)} LTV</Def>
           {sim.cell.capacity.cappedByLiquidity ? " · capped by the market" : ""}
