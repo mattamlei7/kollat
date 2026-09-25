@@ -134,7 +134,7 @@ describe("fixed requested borrow amount", () => {
   function renderSimulator(max: number, amount = 5_000) {
     const sim = simulate([comparisonTable(max)], { ...sel, colKey: "spark:1" }, amount)!;
     return renderToStaticMarkup(createElement(Rail, {
-      sim, hint: "", positions: null, onAmount: () => {}, onSelect: () => {}, view: "sim", onView: () => {},
+      sim, hint: "", positions: null, onAmount: () => {}, onShare: () => {}, onSelect: () => {}, view: "sim", onView: () => {},
     }));
   }
 

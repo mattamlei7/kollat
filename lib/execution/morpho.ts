@@ -86,7 +86,11 @@ export function morphoRepayPlan(p: RepayInput): PlanStep[] {
   if (!all && (p.assets! <= 0n || p.assets! >= p.debt)) throw new Error("Enter an amount below the full debt, or repay everything.");
   const steps: PlanStep[] = [];
   if (p.borrowShares > 0n) {
-    if (p.loanBalance < (all ? p.debt : p.assets!)) throw new Error("Not enough in the wallet to repay that amount.");
+    if (p.loanBalance < (all ? p.debt : p.assets!)) {
+      throw new Error(all
+        ? "Not enough in the wallet to repay everything. Interest has built up since you borrowed, so you owe a little more than you received."
+        : "Not enough in the wallet to repay that amount.");
+    }
     // A full repay is by shares, so interest accrued before inclusion is pulled too; allow 0.1% headroom.
     const pull = all ? p.debt + p.debt / 1000n + 1n : p.assets!;
     if (p.allowance < pull) {

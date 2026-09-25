@@ -29,8 +29,7 @@ export function WalletBorrow({ sim, issue }: { sim: Sim; issue: string | null })
       r.readContract({ address: loan, abi: ERC20_ABI, functionName: "balanceOf", args: [user] }),
     ]);
     setBefore(loanBalance);
-    const units = Math.min(sim.row.holding.units, sim.cell.capacity.collateralUsd / market.collateralPriceUsd);
-    const wanted = parseUnits(units.toFixed(market.collateral.decimals), market.collateral.decimals);
+    const wanted = parseUnits(sim.units.toFixed(market.collateral.decimals), market.collateral.decimals);
     const spendable = collateralBalance + (native > GAS_RESERVE ? native - GAS_RESERVE : 0n);
     const amount = wanted < spendable ? wanted : spendable;
     setCollateral(amount);

@@ -25,7 +25,7 @@ export function reviewTerms(sim: Sim): string {
     sim.table.chainId, sim.col.id, sim.cell.market.id, sim.row.holding.token.address,
     sim.amount, sim.max, sim.apy, sim.costPerYear, sim.hf, sim.liq, sim.existingDebt,
     sim.cell.market.collateralPriceUsd, sim.cell.market.liquidationThreshold,
-    sim.cell.market.liquidationPenalty, sim.cell.capacity.collateralUsd, sim.row.holding.units,
+    sim.cell.market.liquidationPenalty, sim.cell.capacity.collateralUsd, sim.row.holding.units, sim.units,
   ]);
 }
 
@@ -36,7 +36,7 @@ export function BorrowReview({ sim, unavailable, onBack }: { sim: Sim; unavailab
   const changed = terms !== reviewTerms(sim);
   const issue = changed ? "The borrowing details changed. Go back and review the updated estimate." : reviewIssue(sim, unavailable);
   useEffect(() => { heading.current?.focus(); }, [continued]);
-  const units = Math.min(sim.row.holding.units, sim.cell.capacity.collateralUsd / sim.cell.market.collateralPriceUsd);
+  const units = sim.units;
   const symbol = sim.row.holding.token.symbol;
   const live = executable(sim.col.id, sim.table.chainId);
 
@@ -60,7 +60,7 @@ export function BorrowReview({ sim, unavailable, onBack }: { sim: Sim; unavailab
       <p className="body-strong">{sim.liq > 0 ? `Liquidation could begin at ${usd(sim.liq, { cents: true })} per ${symbol}.` : "Existing collateral covers the modeled debt at this asset price."}</p>
       <p className="text-t2">Some collateral could be sold to repay debt, plus a {pct(sim.cell.market.liquidationPenalty, 1)} liquidation penalty. Other collateral prices are held constant. Rates and risk can change.</p>
     </div>
-    <p className="text-t2">Uses the whole balance the protocol can accept. Capacity is an estimate, not loan approval.</p>
+    <p className="text-t2">{sim.share < 1 ? `Uses ${pct(sim.share, 0)} of the balance the protocol can accept; the rest stays in your wallet.` : "Uses the whole balance the protocol can accept."} Capacity is an estimate, not loan approval.</p>
     {continued && live ? <>
       {issue && <p className="hue-caution" role="alert">{issue}</p>}
       <WalletBorrow sim={sim} issue={issue} />

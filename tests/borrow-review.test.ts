@@ -33,6 +33,18 @@ describe("borrow review", () => {
     }
     expect(reviewIssue(s, "Account read failed")).toBe("Account read failed");
   });
+  it("less collateral: fewer units deposited, lower limit, closer liquidation", () => {
+    const full = sim();
+    const half = simulate([table], { chainId: 1, colKey: column.key, rowKey: "0xweth" }, 5000, null, 0.5)!;
+    expect(half.units).toBe(2);
+    expect(half.max).toBe(4800);
+    expect(half.withinCapacity).toBe(false);
+    expect(half.liq).toBeGreaterThan(full.liq);
+    const quarterLoan = simulate([table], { chainId: 1, colKey: column.key, rowKey: "0xweth" }, 2000, null, 0.5)!;
+    expect(quarterLoan.hf).toBeLessThan(simulate([table], { chainId: 1, colKey: column.key, rowKey: "0xweth" }, 2000)!.hf);
+    expect(renderToStaticMarkup(createElement(BorrowReview, { sim: quarterLoan, onBack: () => {} }))).toContain("2 WETH");
+    expect(reviewTerms(quarterLoan)).not.toBe(reviewTerms({ ...quarterLoan, units: 3 }));
+  });
   it("invalidates changed terms while ignoring mere timestamp refreshes", () => {
     const s = sim();
     expect(reviewTerms({ ...s, amount: 5001 })).not.toBe(reviewTerms(s));

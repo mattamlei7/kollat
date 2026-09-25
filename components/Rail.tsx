@@ -36,6 +36,9 @@ export interface Sim {
   cols: Column[];
   max: number;
   amount: number;
+  /** Collateral deposited, in token units: `share` of what the protocol would accept. */
+  units: number;
+  share: number;
   /** A capacity comparison only, not a policy approval or executable quote. */
   withinCapacity: boolean;
   hf: number;
@@ -74,7 +77,7 @@ export function foldable(positions: PositionView[] | null, chainId: number, prot
   );
 }
 
-export function simulate(tables: ChainTable[], sel: Selection | null, amount: number, positions: PositionView[] | null = null): Sim | null {
+export function simulate(tables: ChainTable[], sel: Selection | null, amount: number, positions: PositionView[] | null = null, share = 1): Sim | null {
   if (!sel || !Number.isFinite(amount) || amount < 0) return null;
   const table = tables.find((t) => t.chainId === sel.chainId);
   const row = table?.rows.find((r) => rowKeyOf(r) === sel.rowKey);
@@ -84,10 +87,12 @@ export function simulate(tables: ChainTable[], sel: Selection | null, amount: nu
   if (!col) return null;
   const cell = row.cells[col.key] as CapacityCell;
   const { market, capacity, rate } = cell;
-  const max = capacity.maxBorrowUsd;
+  share = Math.max(0, Math.min(1, share));
+  // Collateral the protocol would accept (a supply cap can take less than the wallet holds), scaled by the borrower's choice.
+  const units = Math.min(row.holding.units, capacity.collateralUsd / market.collateralPriceUsd) * share;
+  // Less collateral lowers the LTV limit; the market's liquidity cap still applies.
+  const max = share === 1 ? capacity.maxBorrowUsd : Math.min(capacity.maxBorrowUsd, units * market.collateralPriceUsd * market.ltv);
   const withinCapacity = amount <= max;
-  // Collateral the protocol would accept (a supply cap can take less than the wallet holds).
-  const units = Math.min(row.holding.units, capacity.collateralUsd / market.collateralPriceUsd);
   const existing = foldable(positions, table.chainId, col.id, market.id);
   const existingDebt = existing.reduce((s, p) => s + p.position.debt.reduce((d, l) => d + l.usd, 0), 0);
   // Existing collateral legs only matter by USD value, so price them at $1 per USD.
@@ -115,7 +120,7 @@ export function simulate(tables: ChainTable[], sel: Selection | null, amount: nu
   }
 
   return {
-    table, row, col, cell, cols, max, amount, withinCapacity, hf, existingDebt,
+    table, row, col, cell, cols, max, amount, units, share, withinCapacity, hf, existingDebt,
     band: riskBand(hf),
     liq,
     dist: distanceToLiquidation(market.collateralPriceUsd, liq),
@@ -131,6 +136,7 @@ interface RailProps {
   hint: string;
   positions: PositionView[] | null;
   onAmount: (amount: number) => void;
+  onShare: (share: number) => void;
   onSelect: (s: Selection) => void;
   view: RailView;
   onView: (v: RailView) => void;
@@ -154,7 +160,7 @@ export function Rail(props: RailProps) {
   return <Simulator key="sim" {...props} reviewUnavailable={unavailable} />;
 }
 
-function Simulator({ sim, hint, positions, onAmount, onSelect, onView, reviewUnavailable }: RailProps) {
+function Simulator({ sim, hint, positions, onAmount, onShare, onSelect, onView, reviewUnavailable }: RailProps) {
   const band = sim?.band ?? "none";
   const t = tone(band);
   const sym = sim?.row.holding.token.symbol;
@@ -258,6 +264,28 @@ function Simulator({ sim, hint, positions, onAmount, onSelect, onView, reviewUna
               </option>
             ))}
         </select>
+      </div>
+
+      {/* How much of the holding backs the loan. Less collateral: less locked up, closer liquidation. */}
+      <div>
+        <div className="flex items-baseline justify-between gap-3">
+          <label className="label-strong text-t2" htmlFor="sim-collateral">Collateral</label>
+          <span className="num text-t2">{fmtAmount(sim.units)} {sym} · {usd(sim.units * sim.cell.market.collateralPriceUsd)}</span>
+        </div>
+        <div className="flex items-center gap-3 mt-1">
+          <input
+            id="sim-collateral"
+            className="flex-1"
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={sim.share}
+            aria-valuetext={`${fmtAmount(sim.units)} ${sym}, ${pct(sim.share, 0)} of what ${sim.col.name} accepts`}
+            onChange={(e) => onShare(Number(e.target.value))}
+          />
+          <button type="button" className="btn btn-soft" onClick={() => onShare(1)}>All</button>
+        </div>
       </div>
 
       {/* Amount is entered in the top bar; the rail adjusts it within this option's limit. */}

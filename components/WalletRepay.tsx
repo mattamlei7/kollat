@@ -48,7 +48,7 @@ export function WalletRepay({ view, owner, onChanged }: { view: PositionView; ow
     <p className="text-t2"><strong>{modeNote}</strong> Repayment comes from your wallet{debtToken ? `'s ${debtToken.symbol}` : ""}. Collateral returns to the same wallet.</p>
     {!s.plan && <label className="flex flex-col gap-1">
       <span className="text-t2">Repay part{debtToken ? ` (${debtToken.symbol})` : ""}</span>
-      <span className="search"><input className="num" inputMode="decimal" value={input} onChange={(e) => setInput(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0.00" /></span>
+      <input className="ctl num w-full" inputMode="decimal" value={input} onChange={(e) => setInput(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0.00" />
     </label>}
     {s.plan && <StepList steps={s.plan.steps} done={s.done} busy={s.busy} />}
     {s.error && <p className="hue-caution" role="alert">{s.error}</p>}

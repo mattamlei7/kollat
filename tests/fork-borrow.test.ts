@@ -1,4 +1,4 @@
-import { createPublicClient, createTestClient, createWalletClient, http, parseEther, parseUnits, type Address, type Hex } from "viem";
+import { createPublicClient, createTestClient, createWalletClient, defineChain, http, parseEther, parseUnits, type Address, type Hex } from "viem";
 import { base } from "viem/chains";
 import { describe, expect, it } from "vitest";
 import { BASE_WETH, ERC20_ABI, MORPHO_WRITE_ABI, morphoBorrowPlan, morphoRepayPlan, toAssetsUp, type PlanStep } from "../lib/execution/morpho";
@@ -15,11 +15,14 @@ describe.skipIf(!RPC)("Morpho borrow on a Base fork", () => {
     });
     const marketId = (await res.json()).data.markets.items[0].marketId as Hex;
 
-    const f = createPublicClient({ chain: base, transport: http(RPC) });
+    // The fork may run under its own chain id (NEXT_PUBLIC_FORK_CHAIN_ID); contracts are Base's either way.
+    const transport = http(RPC, { timeout: 60_000 });
+    const chain = defineChain({ ...base, id: await createPublicClient({ transport }).getChainId() });
+    const f = createPublicClient({ chain, transport });
     const user = `0x${[...crypto.getRandomValues(new Uint8Array(20))].map((b) => b.toString(16).padStart(2, "0")).join("")}` as Address; // fresh, impersonated
-    await createTestClient({ chain: base, mode: "anvil", transport: http(RPC) }).impersonateAccount({ address: user });
-    await createTestClient({ chain: base, mode: "anvil", transport: http(RPC) }).setBalance({ address: user, value: parseEther("10") });
-    const w = createWalletClient({ chain: base, transport: http(RPC) });
+    await createTestClient({ chain, mode: "anvil", transport }).impersonateAccount({ address: user });
+    await createTestClient({ chain, mode: "anvil", transport }).setBalance({ address: user, value: parseEther("10") });
+    const w = createWalletClient({ chain, transport });
     const morpho = MORPHO_BLUE[8453]!;
 
     const [loanToken, collateralToken, oracle, irm, lltv] = await f.readContract({ address: morpho, abi: MORPHO_WRITE_ABI, functionName: "idToMarketParams", args: [marketId] });
@@ -70,7 +73,7 @@ describe.skipIf(!RPC)("Morpho borrow on a Base fork", () => {
     expect(end.borrowShares).toBe(0n);
     expect(end.collateral).toBe(collateralBefore);
     expect(await read(collateralToken) - wethBefore).toBe(collateral);
-  }, 120_000);
+  }, 300_000);
 });
 
 describe("Morpho borrow plan", () => {

@@ -19,6 +19,8 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
   const [picked, setPicked] = useState<Selection | null>(null);
   // Borrower intent stays fixed across route changes and refreshed capacity data.
   const [borrowAmount, setBorrowAmount] = useState(0);
+  // Share of the accepted balance deposited as collateral.
+  const [collateralShare, setCollateralShare] = useState(1);
   const [view, setView] = useState<RailView>("sim");
 
   // Keep the URL shareable: ?a=<address>&chain=<id>
@@ -40,7 +42,7 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
   const positions = useMemo(() => (account.data ? collectPositions(account.data) : null), [account.data]);
 
   // The picked cell may not exist for a new address; fall back to the first borrowable holding.
-  const sim = useMemo(() => simulate(tables, picked, borrowAmount, positions?.positions) ?? simulate(tables, defaultSelection(tables), borrowAmount, positions?.positions), [tables, picked, borrowAmount, positions]);
+  const sim = useMemo(() => simulate(tables, picked, borrowAmount, positions?.positions, collateralShare) ?? simulate(tables, defaultSelection(tables), borrowAmount, positions?.positions, collateralShare), [tables, picked, borrowAmount, positions, collateralShare]);
   const selection: Selection | null = sim ? { chainId: sim.table.chainId, rowKey: sim.row.holding.token.address.toLowerCase(), colKey: sim.col.key } : null;
   const simTone = tone(sim?.band ?? "none");
   const selectedAccount = account.data?.protocols.find((p) => p.chainId === sim?.table.chainId && p.id === sim?.col.id);
@@ -184,6 +186,7 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
           }
           positions={positions?.positions ?? null}
           onAmount={setBorrowAmount}
+          onShare={setCollateralShare}
           onSelect={select}
           view={view}
           onView={setView}
