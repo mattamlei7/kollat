@@ -163,7 +163,7 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
 
               {!emptyEverywhere && (
                 <p className="row mt-4 text-t2 max-w-[80ch]">
-                  Max USDC assumes the whole balance is supplied as collateral and borrowed to the protocol&apos;s maximum loan-to-value. The liquidation price is where that max loan would be liquidated. Aave E-mode and isolation-mode caps are not modelled.
+                  Max USDC assumes the whole balance is supplied as collateral and borrowed to the protocol&apos;s maximum loan-to-value. Aave E-mode and isolation-mode caps are not modelled.
                 </p>
               )}
             </section>

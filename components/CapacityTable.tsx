@@ -21,8 +21,8 @@ interface Props {
 const DUST_USD = 1;
 
 /**
- * Holdings × protocols. Each cell is a max USDC borrow with its liquidation
- * price directly beneath — the two never appear apart.
+ * Holdings × protocols. Each cell is a max USDC borrow with its rate beneath.
+ * The liquidation price for the chosen amount lives in the rail.
  */
 export function CapacityTable({ table, showChain, selection, tone, onSelect, onRetry }: Props) {
   const { columns, rows, totals } = table;
@@ -64,7 +64,7 @@ export function CapacityTable({ table, showChain, selection, tone, onSelect, onR
               {columns.map((c) => (
                 <th scope="col" key={c.key}>
                   {c.name}
-                  <span className="sub">{c.error ? "unavailable" : "max USDC · liq. price"}</span>
+                  <span className="sub">{c.error ? "unavailable" : "max USDC"}</span>
                 </th>
               ))}
             </tr>
@@ -113,9 +113,8 @@ export function CapacityTable({ table, showChain, selection, tone, onSelect, onR
                           <span className={`primary ${selected ? "hue-primary font-semibold" : ""}`}>{usd(capacity.maxBorrowUsd)}</span>
                           {r.best === c.key && <> <Badge>Best</Badge></>}
                           <span className="sub">
-                            liq. {usd(capacity.liquidationPriceAtMaxUsd, { cents: true })}
-                            {rate ? ` · ${pct(rate.borrowApyVariable)}` : ""}
-                            {capacity.cappedByLiquidity ? " · capped" : ""}
+                            {rate ? pct(rate.borrowApyVariable) : ""}
+                            {capacity.cappedByLiquidity ? `${rate ? " · " : ""}capped` : ""}
                           </span>
                         </button>
                       </td>
