@@ -1,5 +1,6 @@
 import { formatUnits, type Address, type Hex } from "viem";
 import { getClient } from "../chains";
+import { toAssetsUp } from "../execution/morpho";
 import { healthFactor, liquidationPriceSingle, uniformDrawdown } from "../math/health";
 import { MORPHO_ABI, MORPHO_ORACLE_ABI } from "./abis/morpho";
 import { MORPHO_BLUE, USDC } from "./addresses";
@@ -12,9 +13,6 @@ const WAD = 1e18;
 const ORACLE_SCALE = 1e36;
 /** Markets with less than this supplied are not offered. */
 const MIN_SUPPLY_USD = 250_000;
-/** Morpho's share accounting adds virtual shares/assets; toAssetsUp needs the same constants. */
-const VIRTUAL_SHARES = 1_000_000n;
-const VIRTUAL_ASSETS = 1n;
 
 interface ApiAsset {
   address: Address;
@@ -208,12 +206,4 @@ export class MorphoBlueAdapter extends BaseLendingProtocol {
       ];
     });
   }
-}
-
-/** Morpho's SharesMathLib.toAssetsUp — borrow shares → assets owed, rounded against the borrower. */
-function toAssetsUp(shares: bigint, totalAssets: bigint, totalShares: bigint): bigint {
-  if (shares === 0n) return 0n;
-  const num = shares * (totalAssets + VIRTUAL_ASSETS);
-  const den = totalShares + VIRTUAL_SHARES;
-  return (num + den - 1n) / den;
 }

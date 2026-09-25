@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 // The invariant being sold: nothing server-side can create an account, sign, or broadcast.
-// Server-side = everything the API routes and CLI can reach. Components are client UI and
-// have no RPC access, so a symbol there is copy, not capability.
+// Server-side = everything the API routes and CLI can reach. Components are client UI: the only
+// signer they touch is the borrower's own browser wallet (components/ForkBorrow.tsx), never a Kollat key.
 const SERVER_DIRS = ["lib", "app/api", "scripts"];
 const FORBIDDEN_IMPORTS = ["viem/accounts", "ethers", "@ethersproject", "web3", "bip39", "@scure/bip32", "@scure/bip39"];
 const FORBIDDEN_SYMBOLS = [

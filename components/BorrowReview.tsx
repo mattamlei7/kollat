@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { CHAIN_LABEL, PROTOCOL_URL } from "@/lib/client-types";
 import { amount, pct, usd } from "@/lib/format";
 import type { Sim } from "./Rail";
+import { WalletBorrow } from "./WalletBorrow";
+import { FORK_RPC, executable } from "./WalletSteps";
 import { Icon } from "./ui";
 import styles from "./BorrowReview.module.css";
 
@@ -36,13 +38,14 @@ export function BorrowReview({ sim, unavailable, onBack }: { sim: Sim; unavailab
   useEffect(() => { heading.current?.focus(); }, [continued]);
   const units = Math.min(sim.row.holding.units, sim.cell.capacity.collateralUsd / sim.cell.market.collateralPriceUsd);
   const symbol = sim.row.holding.token.symbol;
+  const live = executable(sim.col.id, sim.table.chainId);
 
   return <div className="rail-view flex flex-col gap-5">
     <div className="flex items-center gap-3">
       <button type="button" className="btn btn-icon btn-ghost" onClick={onBack} aria-label="Back to simulator"><Icon name="back" /></button>
-      <h2 className="heading" ref={heading} tabIndex={-1}>{continued ? "Continue on the protocol" : "Review borrow"}</h2>
+      <h2 className="heading" ref={heading} tabIndex={-1}>{continued ? (live ? "Borrow with your wallet" : "Continue on the protocol") : "Review borrow"}</h2>
     </div>
-    <p className="text-t2">{continued ? "Preview complete. Your loan has not been opened. Confirm the latest terms and finish on the protocol’s website." : "Know before you borrow. Check the amount, costs, and liquidation exposure for this estimate."}</p>
+    <p className="text-t2">{continued && live ? "Connect your wallet to open this loan. Check each step in your wallet before confirming." : continued ? "Preview complete. Your loan has not been opened. Confirm the latest terms and finish on the protocol’s website." : "Know before you borrow. Check the amount, costs, and liquidation exposure for this estimate."}</p>
     <dl>
       <ReviewLine label="Borrow amount">{usd(sim.amount, { cents: true })} USDC</ReviewLine>
       <ReviewLine label="Collateral used">{amount(units)} {symbol}</ReviewLine>
@@ -58,13 +61,16 @@ export function BorrowReview({ sim, unavailable, onBack }: { sim: Sim; unavailab
       <p className="text-t2">Some collateral could be sold to repay debt, plus a {pct(sim.cell.market.liquidationPenalty, 1)} liquidation penalty. Other collateral prices are held constant. Rates and risk can change.</p>
     </div>
     <p className="text-t2">Uses the whole balance the protocol can accept. Capacity is an estimate, not loan approval.</p>
-    {issue ? <p className="hue-caution" role="alert">{issue}</p> : continued ? (
+    {continued && live ? <>
+      {issue && <p className="hue-caution" role="alert">{issue}</p>}
+      <WalletBorrow sim={sim} issue={issue} />
+    </> : issue ? <p className="hue-caution" role="alert">{issue}</p> : continued ? (
       <a className="btn btn-primary btn-cta" href={PROTOCOL_URL[sim.col.id]} target="_blank" rel="noopener noreferrer">Open {sim.col.name}<Icon name="external" className="w-5 h-5" /></a>
     ) : <>
-      <p id="slide-borrow-note" className="text-t2"><strong>Read-only preview.</strong> Sliding previews the handoff; it does not sign, deposit collateral, or open a loan.</p>
+      <p id="slide-borrow-note" className="text-t2">{live ? <><strong>{FORK_RPC ? "Local fork." : "Real loan."}</strong> Sliding starts the wallet steps; nothing is signed until your wallet asks.</> : <><strong>Read-only preview.</strong> Sliding previews the handoff; it does not sign, deposit collateral, or open a loan.</>}</p>
       <SlideToBorrow onComplete={() => setContinued(true)} />
     </>}
-    <p className="text-t3">Opening a protocol leaves Kollat. Your amounts are not prefilled or transferred. Check fees and terms there before proceeding.</p>
+    {!live && <p className="text-t3">Opening a protocol leaves Kollat. Your amounts are not prefilled or transferred. Check fees and terms there before proceeding.</p>}
     <button type="button" className="btn btn-quiet w-full" onClick={onBack}>Edit borrow amount</button>
   </div>;
 }

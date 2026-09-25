@@ -166,7 +166,7 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
               )}
             </section>
 
-            {positions && <Positions positions={positions.positions} errors={positions.errors} />}
+            {positions && <Positions positions={positions.positions} errors={positions.errors} owner={account.data.address} onChanged={account.refresh} />}
           </>
         )}
       </div>

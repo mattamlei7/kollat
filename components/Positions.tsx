@@ -4,14 +4,19 @@ import { riskBand } from "@/lib/math/health";
 import { BandChip, HealthFactor, hueClass } from "./Risk";
 import { ErrorLine } from "./States";
 import { Avatar, Def, tone } from "./ui";
+import { WalletRepay } from "./WalletRepay";
+import { executable } from "./WalletSteps";
 
 interface Props {
   positions: PositionView[];
+  /** Address the positions belong to; repay needs the same wallet. */
+  owner: string;
+  onChanged?: () => void;
   errors: { name: string; message: string; retryable: boolean }[];
 }
 
 /** Open positions with health factor, per-leg liquidation price and a plain-language read. */
-export function Positions({ positions, errors }: Props) {
+export function Positions({ positions, errors, owner, onChanged }: Props) {
   return (
     <section aria-labelledby="positions" id="positions" className="section">
       <div className="row flex items-baseline gap-3">
@@ -20,7 +25,7 @@ export function Positions({ positions, errors }: Props) {
       </div>
       <div className="flex flex-col gap-2 mt-4">
         {positions.map((v) => (
-          <PositionBlock key={v.key} view={v} />
+          <PositionBlock key={v.key} view={v} owner={owner} onChanged={onChanged} />
         ))}
       </div>
       {errors.length > 0 && (
@@ -32,7 +37,7 @@ export function Positions({ positions, errors }: Props) {
   );
 }
 
-function PositionBlock({ view }: { view: PositionView }) {
+function PositionBlock({ view, owner, onChanged }: { view: PositionView; owner: string; onChanged?: () => void }) {
   const p = view.position;
   // The protocol's own number is authoritative (Aave E-mode, Euler unit of account); ours is the cross-check.
   const hf = p.healthFactorReported ?? p.healthFactor;
@@ -127,6 +132,10 @@ function PositionBlock({ view }: { view: PositionView }) {
           </tbody>
         </table>
       </div>
+
+      {executable(view.protocolId, view.chainId) && p.marketId && p.debt.length + p.collateral.length > 0 && (
+        <div className="px-[var(--gutter)] pt-3"><WalletRepay view={view} owner={owner} onChanged={onChanged} /></div>
+      )}
 
       {(t !== "none" && t !== "safe") || p.notes.length > 0 ? (
         <div className="px-[var(--gutter)] pt-3">
