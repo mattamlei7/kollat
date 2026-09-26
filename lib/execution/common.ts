@@ -1,11 +1,27 @@
-import { encodeFunctionData, parseAbi, type Address, type Hex, type PublicClient } from "viem";
+import { decodeAbiParameters, encodeFunctionData, parseAbi, type Address, type Hex, type PublicClient } from "viem";
 
 /**
  * Shared shape of unsigned borrow/repay plans. Executors read chain state and build calldata only;
  * signing and submission belong to the borrower's own wallet. Nothing here holds a key or broadcasts.
  */
 
-export interface PlanStep { label: string; to: Address; data: Hex; value: bigint }
+export interface PlanStep {
+  label: string;
+  to: Address;
+  data: Hex;
+  value: bigint;
+  /** Compound v2-style calls report failure as a non-zero return code instead of reverting. */
+  errorCode?: "uint" | "uint[]";
+}
+
+/** Simulate a step that reports failure by return code; throw if the protocol would refuse it. */
+export async function assertNoErrorCode(c: PublicClient, user: Address, s: PlanStep) {
+  if (!s.errorCode) return;
+  const { data = "0x" } = await c.call({ account: user, to: s.to, data: s.data, value: s.value });
+  const [ret] = decodeAbiParameters([{ type: s.errorCode === "uint" ? "uint256" : "uint256[]" }], data);
+  const code = (Array.isArray(ret) ? ret : [ret]).find((x) => x !== 0n);
+  if (code !== undefined) throw new Error(`${s.label} was refused by the protocol (error code ${code}). Nothing was sent.`);
+}
 
 export const ERC20_ABI = parseAbi([
   "function balanceOf(address) view returns (uint256)",

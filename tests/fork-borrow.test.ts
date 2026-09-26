@@ -3,14 +3,15 @@ import { arbitrum, avalanche, base, mainnet, optimism, polygon } from "viem/chai
 import { describe, expect, it } from "vitest";
 import { aaveRepayPlan } from "../lib/execution/aave";
 import { compoundRepayPlan } from "../lib/execution/compound";
-import { ERC20_ABI, withGasBuffer, type PlanStep } from "../lib/execution/common";
+import { moonwellBorrowPlan } from "../lib/execution/moonwell";
+import { ERC20_ABI, assertNoErrorCode, withGasBuffer, type PlanStep } from "../lib/execution/common";
 import { executorFor } from "../lib/execution";
 import { morphoBorrowPlan, morphoRepayPlan } from "../lib/execution/morpho";
 import { MORPHO_BLUE, USDC, WNATIVE } from "../lib/protocols/addresses";
 import type { ChainId } from "../lib/protocols/types";
 
 // Runs only against a local fork. FORK_OF picks the chain (default 8453, Base); FORK_PROTOCOL the lender
-// (morpho-blue, aave-v3, spark, compound-v3). E.g.
+// (morpho-blue, aave-v3, spark, compound-v3, moonwell). E.g.
 //   anvil --fork-url https://arb1.arbitrum.io/rpc
 //   FORK_RPC_URL=http://127.0.0.1:8545 FORK_OF=42161 FORK_PROTOCOL=aave-v3 npm test
 const RPC = process.env.FORK_RPC_URL;
@@ -35,7 +36,7 @@ async function morphoMarket() {
   return { marketId: `morpho-blue:${CHAIN_ID}:${m!.marketId}`, collateralToken: address, collateral: parseUnits((5000 / priceUsd).toFixed(Math.min(decimals, 8)), decimals) };
 }
 
-/** Aave, Spark and Compound lend against the wrapped native coin everywhere; roughly $5,000 of it. */
+/** Aave, Spark, Compound and Moonwell lend against the wrapped native coin everywhere; roughly $5,000 of it. */
 const NATIVE_FOR_5K: Record<number, string> = { 137: "20000", 43114: "300" };
 
 describe.skipIf(!RPC)(`${PROTOCOL} wallet flow on a ${REAL?.name} fork`, () => {
@@ -63,7 +64,8 @@ describe.skipIf(!RPC)(`${PROTOCOL} wallet flow on a ${REAL?.name} fork`, () => {
     const balance = (token: Address) => f.readContract({ address: token, abi: ERC20_ABI, functionName: "balanceOf", args: [user] });
     const send = async (plan: PlanStep[]) => {
       for (const s of plan) {
-        // Same as the wallet screens: estimate (simulates the step), then send with a buffer.
+        // Same as the wallet screens: check return codes, estimate (simulates the step), then send with a buffer.
+        await assertNoErrorCode(f, user, s);
         const gas = withGasBuffer(await f.estimateGas({ account: user, to: s.to, data: s.data, value: s.value }));
         const hash = await w.sendTransaction({ account: user, to: s.to, data: s.data, value: s.value, gas });
         expect((await f.waitForTransactionReceipt({ hash })).status, s.label).toBe("success");
@@ -72,12 +74,15 @@ describe.skipIf(!RPC)(`${PROTOCOL} wallet flow on a ${REAL?.name} fork`, () => {
 
     const borrow = parseUnits("500", 6);
     const steps = await exec!.prepareBorrow(f, { ...ref, collateral: target.collateral, borrow, gasReserve: parseEther("0.01"), wrappedNative: WRAPPED, nativeSymbol: REAL.nativeCurrency.symbol });
-    expect(steps.map((s) => s.label)).toEqual([...(native ? [`Wrap ${REAL.nativeCurrency.symbol}`] : []), expect.stringMatching(/^Allow .* to take the collateral$/), "Deposit collateral", "Borrow"]);
+    expect(steps.map((s) => s.label)).toEqual([...(native ? [`Wrap ${REAL.nativeCurrency.symbol}`] : []), expect.stringMatching(/^Allow .* to take the collateral$/), "Deposit collateral",
+      ...(PROTOCOL === "moonwell" ? ["Use it as collateral"] : []), "Borrow"]);
     const usdcBefore = await balance(loanToken);
     await send(steps);
     const opened = await exec!.position(f, ref);
     expect(await balance(loanToken) - usdcBefore).toBe(borrow);
-    expect(opened.collateral).toBeGreaterThanOrEqual(target.collateral - 1n); // Aave's aToken can round down by 1 wei
+    // Share-based deposits (Aave aTokens, Moonwell mTokens) can round down by a few millionths.
+    const dust = target.collateral / 1_000_000n + 1n;
+    expect(opened.collateral).toBeGreaterThanOrEqual(target.collateral - dust);
     expect(opened.debt).toBeGreaterThanOrEqual(borrow);
 
     const tokens = { collateralTokens: [target.collateralToken], debtTokens: [loanToken] };
@@ -85,15 +90,18 @@ describe.skipIf(!RPC)(`${PROTOCOL} wallet flow on a ${REAL?.name} fork`, () => {
     await send(await exec!.prepareRepay(f, { ...ref, ...tokens, assets: parseUnits("200", 6) }));
     const mid = await exec!.position(f, ref);
     expect(mid.debt).toBeLessThan(parseUnits("301", 6));
-    expect(mid.collateral).toBeGreaterThanOrEqual(opened.collateral);
+    expect(mid.collateral).toBeGreaterThanOrEqual(opened.collateral - dust);
 
     // Interest accrues, so top the wallet up slightly before closing (a real borrower needs a little extra too).
     await deal(loanToken, (await balance(loanToken)) + parseUnits("1", 6));
     const collateralBefore = await balance(target.collateralToken);
+    const nativeBefore = await f.getBalance({ address: user });
     await send(await exec!.prepareRepay(f, { ...ref, ...tokens }));
     const end = await exec!.position(f, ref);
     expect(end).toEqual({ collateral: 0n, debt: 0n });
-    expect(await balance(target.collateralToken) - collateralBefore).toBeGreaterThanOrEqual(target.collateral - 1n);
+    // Collateral comes back as the token, or unwrapped to the native coin (Moonwell's mWETH pays out ETH); allow for fees.
+    const returned = (await balance(target.collateralToken) - collateralBefore) + (native ? await f.getBalance({ address: user }) - nativeBefore : 0n);
+    expect(returned).toBeGreaterThanOrEqual(target.collateral - dust - (native ? parseEther("0.01") : 0n));
   }, 300_000);
 });
 
@@ -129,6 +137,12 @@ describe("plan builders", () => {
     const plan = compoundRepayPlan({ comet: weth, loanToken: USDC[8453], debt: 1000n, loanBalance: 2000n, allowance: 2000n, collateral: [{ token: weth, amount: 7n }] });
     expect(plan.map((s) => s.label)).toEqual(["Repay the full debt", "Withdraw collateral"]);
     expect(() => compoundRepayPlan({ comet: weth, loanToken: USDC[8453], debt: 1000n, loanBalance: 999n, allowance: 0n, collateral: [] })).toThrow(/Interest has built up/);
+  });
+  it("Moonwell steps that report failure by return code are marked for checking; entering the market is skipped once done", () => {
+    const b = { comptroller: weth, mCollateral: weth, mLoan: weth, collateralToken: weth, entered: false, collateral: 10n, borrow: 5n,
+      collateralBalance: 10n, allowance: 10n, native: 0n, gasReserve: 1n, wrappedNative: weth, nativeSymbol: "ETH" };
+    expect(moonwellBorrowPlan(b).map((s) => [s.label, s.errorCode])).toEqual([["Deposit collateral", "uint"], ["Use it as collateral", "uint[]"], ["Borrow", "uint"]]);
+    expect(moonwellBorrowPlan({ ...b, entered: true }).map((s) => s.label)).toEqual(["Deposit collateral", "Borrow"]);
   });
   it("an Aave full close refuses while the account owes something else; a partial repay is still allowed", () => {
     expect(() => aaveRepayPlan({ ...a, otherDebt: true })).toThrow(/owes other assets/);

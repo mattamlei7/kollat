@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { createPublicClient, createWalletClient, custom, defineChain, http, type Address, type Chain, type EIP1193Provider } from "viem";
+import { createPublicClient, createWalletClient, custom, defineChain, http, type Address, type Chain, type EIP1193Provider, type PublicClient } from "viem";
 import { arbitrum, avalanche, base, mainnet, optimism, polygon } from "viem/chains";
 import { executorFor, type PlanStep } from "@/lib/execution";
-import { withGasBuffer } from "@/lib/execution/common";
+import { assertNoErrorCode, withGasBuffer } from "@/lib/execution/common";
 import { CHAIN_LABEL } from "@/lib/client-types";
 
 /**
- * Wallet execution (Morpho, Aave, Spark, Compound), signed by the borrower's own browser wallet.
+ * Wallet execution (Morpho, Aave, Spark, Compound, Moonwell), signed by the borrower's own browser wallet.
  * The server never signs and funds never pass through Kollat.
  * - NEXT_PUBLIC_FORK_RPC_URL: local fork (dev) of the chain in NEXT_PUBLIC_FORK_OF (default 8453, Base).
  *   Refuses a wallet that is on the real chain. NEXT_PUBLIC_FORK_CHAIN_ID gives the fork its own
@@ -88,6 +88,7 @@ export function useSteps(chainId: number) {
       const r = reader(chainId);
       for (let i = done; i < plan.steps.length; i++) {
         const s = plan.steps[i];
+        await assertNoErrorCode(r as PublicClient, plan.user, s);
         // Estimating simulates the step (throws on revert) and sizes its gas.
         const gas = withGasBuffer(await r.estimateGas({ account: plan.user, to: s.to, data: s.data, value: s.value }));
         const hash = await w.sendTransaction({ account: plan.user, chain: chainFor(chainId), to: s.to, data: s.data, value: s.value, gas });
