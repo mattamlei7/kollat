@@ -1,10 +1,9 @@
 import { encodeFunctionData, parseAbi, type Address, type Hex } from "viem";
+import { ERC20_ABI, approveStep, fundSteps, readFunding, withHeadroom, type Executor, type PlanStep } from "./common";
 
 /**
  * Unsigned Morpho Blue plans. Borrow: wrap → approve → supplyCollateral → borrow.
- * Repay: approve → repay → withdrawCollateral.
- * Builds calldata only. Signing and submission belong to the borrower's own wallet;
- * nothing here holds a key or broadcasts.
+ * Repay: approve → repay → withdrawCollateral. Isolated markets: one collateral, one loan asset.
  */
 
 export const MORPHO_WRITE_ABI = parseAbi([
@@ -16,16 +15,8 @@ export const MORPHO_WRITE_ABI = parseAbi([
   "function supplyCollateral((address loanToken, address collateralToken, address oracle, address irm, uint256 lltv) marketParams, uint256 assets, address onBehalf, bytes data)",
   "function borrow((address loanToken, address collateralToken, address oracle, address irm, uint256 lltv) marketParams, uint256 assets, uint256 shares, address onBehalf, address receiver) returns (uint256, uint256)",
 ]);
-export const ERC20_ABI = parseAbi([
-  "function balanceOf(address) view returns (uint256)",
-  "function allowance(address owner, address spender) view returns (uint256)",
-  "function approve(address spender, uint256 amount) returns (bool)",
-]);
-const WETH_ABI = parseAbi(["function deposit() payable"]);
 
 export interface MarketParams { loanToken: Address; collateralToken: Address; oracle: Address; irm: Address; lltv: bigint }
-
-export interface PlanStep { label: string; to: Address; data: Hex; value: bigint }
 
 export interface PlanInput {
   morpho: Address;
@@ -41,30 +32,21 @@ export interface PlanInput {
   native: bigint;
   /** Native kept back for gas when wrapping. */
   gasReserve: bigint;
-  /** The chain's wrapped native token (WETH, WPOL): a shortfall in it can be wrapped from native. */
   wrappedNative: Address;
   nativeSymbol: string;
 }
 
 export function morphoBorrowPlan(p: PlanInput): PlanStep[] {
   if (p.collateral <= 0n || p.borrow <= 0n) throw new Error("Collateral and borrow amounts must be positive.");
-  const steps: PlanStep[] = [];
-  const shortfall = p.collateral - p.collateralBalance;
-  if (shortfall > 0n) {
-    if (p.market.collateralToken.toLowerCase() !== p.wrappedNative.toLowerCase()) throw new Error("Not enough collateral in the wallet.");
-    if (p.native - p.gasReserve < shortfall) throw new Error("Not enough ETH to wrap while keeping some for network fees.");
-    steps.push({ label: `Wrap ${p.nativeSymbol}`, to: p.wrappedNative, data: encodeFunctionData({ abi: WETH_ABI, functionName: "deposit" }), value: shortfall });
-  }
-  if (p.allowance < p.collateral) {
-    steps.push({ label: "Allow Morpho to take the collateral", to: p.market.collateralToken, value: 0n,
-      data: encodeFunctionData({ abi: ERC20_ABI, functionName: "approve", args: [p.morpho, p.collateral] }) });
-  }
-  steps.push({ label: "Deposit collateral", to: p.morpho, value: 0n,
-    data: encodeFunctionData({ abi: MORPHO_WRITE_ABI, functionName: "supplyCollateral", args: [p.market, p.collateral, p.user, "0x"] }) });
-  // Receiver is the borrower: proceeds never pass through a Kollat account.
-  steps.push({ label: "Borrow", to: p.morpho, value: 0n,
-    data: encodeFunctionData({ abi: MORPHO_WRITE_ABI, functionName: "borrow", args: [p.market, p.borrow, 0n, p.user, p.user] }) });
-  return steps;
+  return [
+    ...fundSteps({ token: p.market.collateralToken, spender: p.morpho, spenderName: "Morpho", amount: p.collateral, balance: p.collateralBalance,
+      allowance: p.allowance, native: p.native, gasReserve: p.gasReserve, wrappedNative: p.wrappedNative, nativeSymbol: p.nativeSymbol }),
+    { label: "Deposit collateral", to: p.morpho, value: 0n,
+      data: encodeFunctionData({ abi: MORPHO_WRITE_ABI, functionName: "supplyCollateral", args: [p.market, p.collateral, p.user, "0x"] }) },
+    // Receiver is the borrower: proceeds never pass through a Kollat account.
+    { label: "Borrow", to: p.morpho, value: 0n,
+      data: encodeFunctionData({ abi: MORPHO_WRITE_ABI, functionName: "borrow", args: [p.market, p.borrow, 0n, p.user, p.user] }) },
+  ];
 }
 
 export interface RepayInput {
@@ -81,22 +63,17 @@ export interface RepayInput {
   allowance: bigint;
 }
 
+export const SHORT_FOR_FULL_REPAY = "Not enough in the wallet to repay everything. Interest has built up since you borrowed, so you owe a little more than you received.";
+
 export function morphoRepayPlan(p: RepayInput): PlanStep[] {
   const all = p.assets === undefined;
   if (!all && (p.assets! <= 0n || p.assets! >= p.debt)) throw new Error("Enter an amount below the full debt, or repay everything.");
   const steps: PlanStep[] = [];
   if (p.borrowShares > 0n) {
-    if (p.loanBalance < (all ? p.debt : p.assets!)) {
-      throw new Error(all
-        ? "Not enough in the wallet to repay everything. Interest has built up since you borrowed, so you owe a little more than you received."
-        : "Not enough in the wallet to repay that amount.");
-    }
-    // A full repay is by shares, so interest accrued before inclusion is pulled too; allow 0.1% headroom.
-    const pull = all ? p.debt + p.debt / 1000n + 1n : p.assets!;
-    if (p.allowance < pull) {
-      steps.push({ label: "Allow Morpho to take the repayment", to: p.market.loanToken, value: 0n,
-        data: encodeFunctionData({ abi: ERC20_ABI, functionName: "approve", args: [p.morpho, pull] }) });
-    }
+    if (p.loanBalance < (all ? p.debt : p.assets!)) throw new Error(all ? SHORT_FOR_FULL_REPAY : "Not enough in the wallet to repay that amount.");
+    // A full repay is by shares, so interest accrued before inclusion is pulled too.
+    const pull = all ? withHeadroom(p.debt) : p.assets!;
+    if (p.allowance < pull) steps.push(approveStep("Allow Morpho to take the repayment", p.market.loanToken, p.morpho, pull));
     steps.push({ label: all ? "Repay the full debt" : "Repay part of the debt", to: p.morpho, value: 0n,
       data: encodeFunctionData({ abi: MORPHO_WRITE_ABI, functionName: "repay", args: [p.market, all ? 0n : p.assets!, all ? p.borrowShares : 0n, p.user, "0x"] }) });
   }
@@ -118,4 +95,42 @@ export function toAssetsUp(shares: bigint, totalAssets: bigint, totalShares: big
   const num = shares * (totalAssets + VIRTUAL_ASSETS);
   const den = totalShares + VIRTUAL_SHARES;
   return (num + den - 1n) / den;
+}
+
+const idOf = (marketId: string) => marketId.slice(marketId.lastIndexOf(":") + 1) as Hex;
+
+export function morphoExecutor(morpho: Address): Executor {
+  const params = async (c: Parameters<Executor["position"]>[0], id: Hex): Promise<MarketParams> => {
+    const [loanToken, collateralToken, oracle, irm, lltv] = await c.readContract({ address: morpho, abi: MORPHO_WRITE_ABI, functionName: "idToMarketParams", args: [id] });
+    return { loanToken, collateralToken, oracle, irm, lltv };
+  };
+  const state = async (c: Parameters<Executor["position"]>[0], id: Hex, user: Address) => {
+    const [[, borrowShares, collateral], [, , totalBorrowAssets, totalBorrowShares]] = await Promise.all([
+      c.readContract({ address: morpho, abi: MORPHO_WRITE_ABI, functionName: "position", args: [id, user] }),
+      c.readContract({ address: morpho, abi: MORPHO_WRITE_ABI, functionName: "market", args: [id] }),
+    ]);
+    return { borrowShares, collateral, debt: toAssetsUp(borrowShares, totalBorrowAssets, totalBorrowShares) };
+  };
+  return {
+    async prepareBorrow(c, r) {
+      const market = await params(c, idOf(r.marketId));
+      const f = await readFunding(c, market.collateralToken, r.user, morpho);
+      return morphoBorrowPlan({ morpho, market, user: r.user, collateral: r.collateral, borrow: r.borrow, collateralBalance: f.balance,
+        allowance: f.allowance, native: f.native, gasReserve: r.gasReserve, wrappedNative: r.wrappedNative, nativeSymbol: r.nativeSymbol });
+    },
+    async prepareRepay(c, r) {
+      const id = idOf(r.marketId);
+      const market = await params(c, id);
+      const [s, loanBalance, allowance] = await Promise.all([
+        state(c, id, r.user),
+        c.readContract({ address: market.loanToken, abi: ERC20_ABI, functionName: "balanceOf", args: [r.user] }),
+        c.readContract({ address: market.loanToken, abi: ERC20_ABI, functionName: "allowance", args: [r.user, morpho] }),
+      ]);
+      return morphoRepayPlan({ morpho, market, user: r.user, assets: r.assets, ...s, loanBalance, allowance });
+    },
+    async position(c, r) {
+      const { collateral, debt } = await state(c, idOf(r.marketId), r.user);
+      return { collateral, debt };
+    },
+  };
 }

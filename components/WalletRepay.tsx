@@ -1,44 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { formatUnits, parseUnits, type Address, type Hex } from "viem";
-import { ERC20_ABI, MORPHO_WRITE_ABI, morphoRepayPlan, toAssetsUp } from "@/lib/execution/morpho";
+import { formatUnits, parseUnits, type Address } from "viem";
+import { executorFor } from "@/lib/execution";
+import { USDC } from "@/lib/protocols/addresses";
+import type { ChainId } from "@/lib/protocols/types";
 import type { PositionView } from "@/lib/join";
 import { amount as fmtAmount } from "@/lib/format";
-import { StepList, modeNote, morphoOn, reader, useSteps } from "./WalletSteps";
+import { StepList, modeNote, reader, useSteps } from "./WalletSteps";
 
-/** Repay part of a Morpho position, or repay all of it and take the collateral back. */
+/** Repay part of a position, or repay all of it and take the collateral back. Kollat's loans are in USDC. */
 export function WalletRepay({ view, owner, onChanged }: { view: PositionView; owner: string; onChanged?: () => void }) {
-  const MORPHO = morphoOn(view.chainId);
   const s = useSteps(view.chainId);
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const p = view.position;
-  const marketId = (p.marketId ?? "").slice((p.marketId ?? "").lastIndexOf(":") + 1) as Hex;
-  const debtToken = p.debt[0]?.token;
+  const loanToken = USDC[view.chainId as ChainId];
+  const debtToken = p.debt.find((l) => l.token.address.toLowerCase() === loanToken.toLowerCase())?.token ?? { symbol: "USDC", decimals: 6 };
   const collToken = p.collateral[0]?.token;
+  const ref = { marketId: p.marketId ?? "", loanToken, collateralToken: (collToken?.address ?? loanToken) as Address };
 
   const prepare = (repayAll: boolean) => s.prepare(async (user) => {
-    const r = reader(view.chainId);
-    const [loanToken, collateralToken, oracle, irm, lltv] = await r.readContract({ address: MORPHO, abi: MORPHO_WRITE_ABI, functionName: "idToMarketParams", args: [marketId] });
-    const [[, borrowShares, collateral], [, , totalBorrowAssets, totalBorrowShares], loanBalance, allowance] = await Promise.all([
-      r.readContract({ address: MORPHO, abi: MORPHO_WRITE_ABI, functionName: "position", args: [marketId, user] }),
-      r.readContract({ address: MORPHO, abi: MORPHO_WRITE_ABI, functionName: "market", args: [marketId] }),
-      r.readContract({ address: loanToken, abi: ERC20_ABI, functionName: "balanceOf", args: [user] }),
-      r.readContract({ address: loanToken, abi: ERC20_ABI, functionName: "allowance", args: [user, MORPHO] }),
-    ]);
     if (user.toLowerCase() !== owner.toLowerCase()) throw new Error("Connect the wallet that owns this position.");
-    const assets = repayAll ? undefined : parseUnits(input || "0", debtToken?.decimals ?? 6);
-    return morphoRepayPlan({
-      morpho: MORPHO, market: { loanToken, collateralToken, oracle, irm, lltv }, user, assets,
-      borrowShares, debt: toAssetsUp(borrowShares, totalBorrowAssets, totalBorrowShares), collateral, loanBalance, allowance,
+    return executorFor(view.protocolId, view.chainId)!.prepareRepay(reader(view.chainId), {
+      ...ref, user, assets: repayAll ? undefined : parseUnits(input || "0", debtToken.decimals),
+      collateralTokens: p.collateral.map((l) => l.token.address as Address), debtTokens: p.debt.map((l) => l.token.address as Address),
     });
   });
 
   const execute = () => s.execute(async (user: Address) => {
-    const [, borrowShares, collateral] = await reader(view.chainId).readContract({ address: MORPHO, abi: MORPHO_WRITE_ABI, functionName: "position", args: [marketId, user] });
-    setResult(borrowShares === 0n && collateral === 0n ? "Loan closed. Your collateral is back in your wallet."
+    const { collateral, debt } = await executorFor(view.protocolId, view.chainId)!.position(reader(view.chainId), { ...ref, user });
+    setResult(debt === 0n && collateral === 0n ? "Loan closed. Your collateral is back in your wallet."
       : `Repaid. ${collToken ? `${fmtAmount(Number(formatUnits(collateral, collToken.decimals)))} ${collToken.symbol} still backs the remaining debt.` : ""}`);
     onChanged?.();
   });

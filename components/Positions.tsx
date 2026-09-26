@@ -133,7 +133,7 @@ function PositionBlock({ view, owner, onChanged }: { view: PositionView; owner: 
         </table>
       </div>
 
-      {executable(view.protocolId, view.chainId) && p.marketId && p.debt.length + p.collateral.length > 0 && (
+      {executable(view.protocolId, view.chainId) && p.debt.length + p.collateral.length > 0 && (
         <div className="px-[var(--gutter)] pt-3"><WalletRepay view={view} owner={owner} onChanged={onChanged} /></div>
       )}
 

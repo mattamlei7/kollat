@@ -2,18 +2,18 @@
 
 import { useState } from "react";
 import { createPublicClient, createWalletClient, custom, defineChain, http, type Address, type Chain, type EIP1193Provider } from "viem";
-import { arbitrum, base, mainnet, optimism, polygon } from "viem/chains";
-import type { PlanStep } from "@/lib/execution/morpho";
+import { arbitrum, avalanche, base, mainnet, optimism, polygon } from "viem/chains";
+import { executorFor, type PlanStep } from "@/lib/execution";
+import { withGasBuffer } from "@/lib/execution/common";
 import { CHAIN_LABEL } from "@/lib/client-types";
-import { MORPHO_BLUE } from "@/lib/protocols/addresses";
 
 /**
- * Wallet execution for Morpho, signed by the borrower's own browser wallet.
+ * Wallet execution (Morpho, Aave, Spark), signed by the borrower's own browser wallet.
  * The server never signs and funds never pass through Kollat.
  * - NEXT_PUBLIC_FORK_RPC_URL: local fork (dev) of the chain in NEXT_PUBLIC_FORK_OF (default 8453, Base).
  *   Refuses a wallet that is on the real chain. NEXT_PUBLIC_FORK_CHAIN_ID gives the fork its own
  *   chain id (e.g. 31337), so wallets read its balances instead of the real chain's.
- * - NEXT_PUBLIC_EXECUTION=mainnet: every chain Morpho is on, real funds, borrows capped at
+ * - NEXT_PUBLIC_EXECUTION=mainnet: every supported protocol and chain, real funds, borrows capped at
  *   NEXT_PUBLIC_EXECUTION_CAP_USD (default $100).
  * Neither set: the borrow screen stays a read-only preview.
  */
@@ -23,13 +23,10 @@ const FORK_CHAIN_ID = Number(process.env.NEXT_PUBLIC_FORK_CHAIN_ID) || FORK_OF;
 export const MAINNET = !FORK_RPC && process.env.NEXT_PUBLIC_EXECUTION === "mainnet";
 export const CAP_USD = Number(process.env.NEXT_PUBLIC_EXECUTION_CAP_USD) || 100;
 
-/** Chains where Morpho can be borrowed from a wallet. Avalanche has no Morpho. */
-const CHAINS: Record<number, Chain> = { 1: mainnet, 8453: base, 42161: arbitrum, 10: optimism, 137: polygon };
+const CHAINS: Record<number, Chain> = { 1: mainnet, 8453: base, 42161: arbitrum, 10: optimism, 137: polygon, 43114: avalanche };
 
 export const executable = (protocolId: string, chainId: number) =>
-  protocolId === "morpho-blue" && !!MORPHO_BLUE[chainId as keyof typeof MORPHO_BLUE] && !!CHAINS[chainId] &&
-  (FORK_RPC ? chainId === FORK_OF : MAINNET);
-export const morphoOn = (chainId: number) => MORPHO_BLUE[chainId as keyof typeof MORPHO_BLUE]!;
+  !!CHAINS[chainId] && !!executorFor(protocolId, chainId) && (FORK_RPC ? chainId === FORK_OF : MAINNET);
 export const modeNote = (chainId: number) => FORK_RPC ? "Local fork. No real funds move." : `Real funds on ${CHAIN_LABEL[chainId]}. Your wallet signs every step.`;
 
 /** The chain the wallet signs on: the real one, or the fork under its own id. Contracts are the real chain's either way. */
@@ -91,8 +88,9 @@ export function useSteps(chainId: number) {
       const r = reader(chainId);
       for (let i = done; i < plan.steps.length; i++) {
         const s = plan.steps[i];
-        await r.call({ account: plan.user, to: s.to, data: s.data, value: s.value }); // simulate; throws on revert
-        const hash = await w.sendTransaction({ account: plan.user, chain: chainFor(chainId), to: s.to, data: s.data, value: s.value });
+        // Estimating simulates the step (throws on revert) and sizes its gas.
+        const gas = withGasBuffer(await r.estimateGas({ account: plan.user, to: s.to, data: s.data, value: s.value }));
+        const hash = await w.sendTransaction({ account: plan.user, chain: chainFor(chainId), to: s.to, data: s.data, value: s.value, gas });
         if ((await r.waitForTransactionReceipt({ hash })).status !== "success") throw new Error(`${s.label} reverted. Nothing after it was sent.`);
         setDone(i + 1);
       }
