@@ -1,7 +1,8 @@
 import { AaveV3Arbitrum, AaveV3Avalanche, AaveV3Base, AaveV3Ethereum, AaveV3Optimism, AaveV3Polygon } from "@bgd-labs/aave-address-book";
-import { MORPHO_BLUE, SPARK_ETHEREUM } from "../protocols/addresses";
+import { COMET_USDC, MORPHO_BLUE, SPARK_ETHEREUM } from "../protocols/addresses";
 import { aaveExecutor } from "./aave";
 import type { Executor } from "./common";
+import { compoundExecutor } from "./compound";
 import { morphoExecutor } from "./morpho";
 
 export type { Executor, PlanStep } from "./common";
@@ -17,6 +18,10 @@ export function executorFor(protocolId: string, chainId: number): Executor | nul
     return morpho ? morphoExecutor(morpho) : null;
   }
   if (protocolId === "aave-v3" && AAVE[chainId]) return aaveExecutor(AAVE[chainId].POOL, AAVE[chainId].AAVE_PROTOCOL_DATA_PROVIDER, "Aave");
+  if (protocolId === "compound-v3") {
+    const comet = COMET_USDC[chainId as keyof typeof COMET_USDC];
+    return comet ? compoundExecutor(comet) : null;
+  }
   if (protocolId === "spark" && chainId === 1) return aaveExecutor(SPARK_ETHEREUM.POOL, SPARK_ETHEREUM.PROTOCOL_DATA_PROVIDER, "Spark");
   return null;
 }

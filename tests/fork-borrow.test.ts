@@ -2,6 +2,7 @@ import { createPublicClient, createTestClient, createWalletClient, defineChain, 
 import { arbitrum, avalanche, base, mainnet, optimism, polygon } from "viem/chains";
 import { describe, expect, it } from "vitest";
 import { aaveRepayPlan } from "../lib/execution/aave";
+import { compoundRepayPlan } from "../lib/execution/compound";
 import { ERC20_ABI, withGasBuffer, type PlanStep } from "../lib/execution/common";
 import { executorFor } from "../lib/execution";
 import { morphoBorrowPlan, morphoRepayPlan } from "../lib/execution/morpho";
@@ -9,7 +10,7 @@ import { MORPHO_BLUE, USDC, WNATIVE } from "../lib/protocols/addresses";
 import type { ChainId } from "../lib/protocols/types";
 
 // Runs only against a local fork. FORK_OF picks the chain (default 8453, Base); FORK_PROTOCOL the lender
-// (morpho-blue, aave-v3, spark). E.g.
+// (morpho-blue, aave-v3, spark, compound-v3). E.g.
 //   anvil --fork-url https://arb1.arbitrum.io/rpc
 //   FORK_RPC_URL=http://127.0.0.1:8545 FORK_OF=42161 FORK_PROTOCOL=aave-v3 npm test
 const RPC = process.env.FORK_RPC_URL;
@@ -34,7 +35,7 @@ async function morphoMarket() {
   return { marketId: `morpho-blue:${CHAIN_ID}:${m!.marketId}`, collateralToken: address, collateral: parseUnits((5000 / priceUsd).toFixed(Math.min(decimals, 8)), decimals) };
 }
 
-/** Aave and Spark lend against the wrapped native coin everywhere; roughly $5,000 of it. */
+/** Aave, Spark and Compound lend against the wrapped native coin everywhere; roughly $5,000 of it. */
 const NATIVE_FOR_5K: Record<number, string> = { 137: "20000", 43114: "300" };
 
 describe.skipIf(!RPC)(`${PROTOCOL} wallet flow on a ${REAL?.name} fork`, () => {
@@ -123,6 +124,11 @@ describe("plan builders", () => {
     collateral: [{ token: weth, amount: 7n }, { token: USDC[8453], amount: 0n }], otherDebt: false };
   it("an Aave full close repays the loan asset and withdraws each supplied asset", () => {
     expect(aaveRepayPlan(a).map((s) => s.label)).toEqual(["Allow Aave to take the repayment", "Repay the full debt", "Withdraw collateral"]);
+  });
+  it("a Compound full close repays with supply(max) and withdraws each collateral by exact amount", () => {
+    const plan = compoundRepayPlan({ comet: weth, loanToken: USDC[8453], debt: 1000n, loanBalance: 2000n, allowance: 2000n, collateral: [{ token: weth, amount: 7n }] });
+    expect(plan.map((s) => s.label)).toEqual(["Repay the full debt", "Withdraw collateral"]);
+    expect(() => compoundRepayPlan({ comet: weth, loanToken: USDC[8453], debt: 1000n, loanBalance: 999n, allowance: 0n, collateral: [] })).toThrow(/Interest has built up/);
   });
   it("an Aave full close refuses while the account owes something else; a partial repay is still allowed", () => {
     expect(() => aaveRepayPlan({ ...a, otherDebt: true })).toThrow(/owes other assets/);

@@ -8,7 +8,7 @@ import { withGasBuffer } from "@/lib/execution/common";
 import { CHAIN_LABEL } from "@/lib/client-types";
 
 /**
- * Wallet execution (Morpho, Aave, Spark), signed by the borrower's own browser wallet.
+ * Wallet execution (Morpho, Aave, Spark, Compound), signed by the borrower's own browser wallet.
  * The server never signs and funds never pass through Kollat.
  * - NEXT_PUBLIC_FORK_RPC_URL: local fork (dev) of the chain in NEXT_PUBLIC_FORK_OF (default 8453, Base).
  *   Refuses a wallet that is on the real chain. NEXT_PUBLIC_FORK_CHAIN_ID gives the fork its own
