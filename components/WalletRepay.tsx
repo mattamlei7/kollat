@@ -5,11 +5,12 @@ import { formatUnits, parseUnits, type Address, type Hex } from "viem";
 import { ERC20_ABI, MORPHO_WRITE_ABI, morphoRepayPlan, toAssetsUp } from "@/lib/execution/morpho";
 import type { PositionView } from "@/lib/join";
 import { amount as fmtAmount } from "@/lib/format";
-import { MORPHO, StepList, modeNote, reader, useSteps } from "./WalletSteps";
+import { StepList, modeNote, morphoOn, reader, useSteps } from "./WalletSteps";
 
 /** Repay part of a Morpho position, or repay all of it and take the collateral back. */
 export function WalletRepay({ view, owner, onChanged }: { view: PositionView; owner: string; onChanged?: () => void }) {
-  const s = useSteps();
+  const MORPHO = morphoOn(view.chainId);
+  const s = useSteps(view.chainId);
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [result, setResult] = useState<string | null>(null);
@@ -19,7 +20,7 @@ export function WalletRepay({ view, owner, onChanged }: { view: PositionView; ow
   const collToken = p.collateral[0]?.token;
 
   const prepare = (repayAll: boolean) => s.prepare(async (user) => {
-    const r = reader();
+    const r = reader(view.chainId);
     const [loanToken, collateralToken, oracle, irm, lltv] = await r.readContract({ address: MORPHO, abi: MORPHO_WRITE_ABI, functionName: "idToMarketParams", args: [marketId] });
     const [[, borrowShares, collateral], [, , totalBorrowAssets, totalBorrowShares], loanBalance, allowance] = await Promise.all([
       r.readContract({ address: MORPHO, abi: MORPHO_WRITE_ABI, functionName: "position", args: [marketId, user] }),
@@ -36,7 +37,7 @@ export function WalletRepay({ view, owner, onChanged }: { view: PositionView; ow
   });
 
   const execute = () => s.execute(async (user: Address) => {
-    const [, borrowShares, collateral] = await reader().readContract({ address: MORPHO, abi: MORPHO_WRITE_ABI, functionName: "position", args: [marketId, user] });
+    const [, borrowShares, collateral] = await reader(view.chainId).readContract({ address: MORPHO, abi: MORPHO_WRITE_ABI, functionName: "position", args: [marketId, user] });
     setResult(borrowShares === 0n && collateral === 0n ? "Loan closed. Your collateral is back in your wallet."
       : `Repaid. ${collToken ? `${fmtAmount(Number(formatUnits(collateral, collToken.decimals)))} ${collToken.symbol} still backs the remaining debt.` : ""}`);
     onChanged?.();
@@ -45,7 +46,7 @@ export function WalletRepay({ view, owner, onChanged }: { view: PositionView; ow
   if (result) return <p className="body-strong" role="status">{result}</p>;
   if (!open) return <button type="button" className="btn btn-quiet" onClick={() => setOpen(true)}>Repay or close</button>;
   return <div className="flex flex-col gap-3 max-w-md">
-    <p className="text-t2"><strong>{modeNote}</strong> Repayment comes from your wallet{debtToken ? `'s ${debtToken.symbol}` : ""}. Collateral returns to the same wallet.</p>
+    <p className="text-t2"><strong>{modeNote(view.chainId)}</strong> Repayment comes from your wallet{debtToken ? `'s ${debtToken.symbol}` : ""}. Collateral returns to the same wallet.</p>
     {!s.plan && <label className="flex flex-col gap-1">
       <span className="text-t2">Repay part{debtToken ? ` (${debtToken.symbol})` : ""}</span>
       <input className="ctl num w-full" inputMode="decimal" value={input} onChange={(e) => setInput(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0.00" />

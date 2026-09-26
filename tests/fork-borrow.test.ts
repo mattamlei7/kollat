@@ -1,39 +1,55 @@
 import { createPublicClient, createTestClient, createWalletClient, defineChain, http, parseEther, parseUnits, type Address, type Hex } from "viem";
-import { base } from "viem/chains";
+import { arbitrum, base, mainnet, optimism, polygon } from "viem/chains";
 import { describe, expect, it } from "vitest";
-import { BASE_WETH, ERC20_ABI, MORPHO_WRITE_ABI, morphoBorrowPlan, morphoRepayPlan, toAssetsUp, type PlanStep } from "../lib/execution/morpho";
-import { MORPHO_BLUE, USDC } from "../lib/protocols/addresses";
+import { ERC20_ABI, MORPHO_WRITE_ABI, morphoBorrowPlan, morphoRepayPlan, toAssetsUp, type PlanStep } from "../lib/execution/morpho";
+import { MORPHO_BLUE, USDC, WNATIVE } from "../lib/protocols/addresses";
+import type { ChainId } from "../lib/protocols/types";
 
-// Runs only against a local fork: anvil --fork-url https://mainnet.base.org --chain-id 8453
+// Runs only against a local fork of the chain in FORK_OF (default 8453, Base), e.g.
+//   anvil --fork-url https://arb1.arbitrum.io/rpc   then   FORK_RPC_URL=http://127.0.0.1:8545 FORK_OF=42161 npm test
 const RPC = process.env.FORK_RPC_URL;
+const CHAIN_ID = (Number(process.env.FORK_OF) || 8453) as ChainId;
+const REAL = { 1: mainnet, 8453: base, 42161: arbitrum, 10: optimism, 137: polygon }[CHAIN_ID as 1]!;
+const WRAPPED = WNATIVE[CHAIN_ID];
 
-describe.skipIf(!RPC)("Morpho borrow on a Base fork", () => {
+describe.skipIf(!RPC)(`Morpho borrow on a ${REAL.name} fork`, () => {
   it("borrow → partial repay → full repay → collateral back in the wallet", async () => {
-    const res = await fetch("https://blue-api.morpho.org/graphql", {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ query: `{ markets(first: 1, orderBy: SupplyAssetsUsd, orderDirection: Desc, where: { chainId_in: [8453], loanAssetAddress_in: ["${USDC[8453]}"], collateralAssetAddress_in: ["${BASE_WETH}"], listed: true }) { items { marketId } } }` }),
-    });
-    const marketId = (await res.json()).data.markets.items[0].marketId as Hex;
+    // Prefer a market against the chain's native coin (exercises the wrap step); otherwise the deepest USDC market.
+    const query = async (collateral: string) => {
+      const res = await fetch("https://blue-api.morpho.org/graphql", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query: `{ markets(first: 1, orderBy: SupplyAssetsUsd, orderDirection: Desc, where: { chainId_in: [${CHAIN_ID}], loanAssetAddress_in: ["${USDC[CHAIN_ID]}"]${collateral}, listed: true }) { items { marketId collateralAsset { decimals priceUsd } } } }` }),
+      });
+      return (await res.json()).data.markets.items[0] as { marketId: Hex; collateralAsset: { decimals: number; priceUsd: number } } | undefined;
+    };
+    const native = await query(`, collateralAssetAddress_in: ["${WRAPPED}"]`);
+    const picked = native ?? await query("");
+    expect(picked, `no listed USDC Morpho market on ${REAL.name}`).toBeTruthy();
+    const marketId = picked!.marketId;
 
-    // The fork may run under its own chain id (NEXT_PUBLIC_FORK_CHAIN_ID); contracts are Base's either way.
+    // The fork may run under its own chain id (NEXT_PUBLIC_FORK_CHAIN_ID); contracts are the real chain's either way.
     const transport = http(RPC, { timeout: 60_000 });
-    const chain = defineChain({ ...base, id: await createPublicClient({ transport }).getChainId() });
+    const chain = defineChain({ ...REAL, id: await createPublicClient({ transport }).getChainId() });
     const f = createPublicClient({ chain, transport });
     const user = `0x${[...crypto.getRandomValues(new Uint8Array(20))].map((b) => b.toString(16).padStart(2, "0")).join("")}` as Address; // fresh, impersonated
     await createTestClient({ chain, mode: "anvil", transport }).impersonateAccount({ address: user });
-    await createTestClient({ chain, mode: "anvil", transport }).setBalance({ address: user, value: parseEther("10") });
+    await createTestClient({ chain, mode: "anvil", transport }).setBalance({ address: user, value: parseEther("100000") });
     const w = createWalletClient({ chain, transport });
-    const morpho = MORPHO_BLUE[8453]!;
+    const morpho = MORPHO_BLUE[CHAIN_ID]!;
 
     const [loanToken, collateralToken, oracle, irm, lltv] = await f.readContract({ address: morpho, abi: MORPHO_WRITE_ABI, functionName: "idToMarketParams", args: [marketId] });
     const read = (token: typeof loanToken) => f.readContract({ address: token, abi: ERC20_ABI, functionName: "balanceOf", args: [user] });
-    const collateral = parseEther("1");
+    // About $5,000 of collateral backs the $500 loan comfortably.
+    const { decimals, priceUsd } = picked!.collateralAsset;
+    const collateral = parseUnits((5000 / priceUsd).toFixed(Math.min(decimals, 8)), decimals);
+    if (!native) await f.request({ method: "anvil_dealERC20" as never, params: [user, collateralToken, `0x${collateral.toString(16)}`] as never });
     const borrow = parseUnits("500", 6);
     const steps = morphoBorrowPlan({
       morpho, market: { loanToken, collateralToken, oracle, irm, lltv }, user, collateral, borrow,
-      collateralBalance: await read(collateralToken), allowance: 0n, native: parseEther("10"), gasReserve: parseEther("0.01"),
+      collateralBalance: await read(collateralToken), allowance: 0n, native: parseEther("100000"), gasReserve: parseEther("0.01"),
+      wrappedNative: WRAPPED, nativeSymbol: REAL.nativeCurrency.symbol,
     });
-    expect(steps.map((s) => s.label)).toEqual(["Wrap ETH into WETH", "Allow Morpho to take the collateral", "Deposit collateral", "Borrow"]);
+    expect(steps.map((s) => s.label)).toEqual([...(native ? [`Wrap ${REAL.nativeCurrency.symbol}`] : []), "Allow Morpho to take the collateral", "Deposit collateral", "Borrow"]);
 
     const before = await read(loanToken);
     const [, , collateralBefore] = await f.readContract({ address: morpho, abi: MORPHO_WRITE_ABI, functionName: "position", args: [marketId, user] });
@@ -77,10 +93,15 @@ describe.skipIf(!RPC)("Morpho borrow on a Base fork", () => {
 });
 
 describe("Morpho borrow plan", () => {
-  const market = { loanToken: USDC[8453]!, collateralToken: BASE_WETH, oracle: BASE_WETH, irm: BASE_WETH, lltv: 0n };
-  const p = { morpho: MORPHO_BLUE[8453]!, market, user: BASE_WETH, collateral: 10n, borrow: 5n, collateralBalance: 10n, allowance: 10n, native: 0n, gasReserve: 1n };
+  const weth = WNATIVE[8453];
+  const market = { loanToken: USDC[8453], collateralToken: weth, oracle: weth, irm: weth, lltv: 0n };
+  const p = { morpho: MORPHO_BLUE[8453]!, market, user: weth, collateral: 10n, borrow: 5n, collateralBalance: 10n, allowance: 10n, native: 0n, gasReserve: 1n, wrappedNative: weth, nativeSymbol: "ETH" };
   it("skips wrap and approve when the wallet already has both", () => {
     expect(morphoBorrowPlan(p).map((s) => s.label)).toEqual(["Deposit collateral", "Borrow"]);
+  });
+  it("wraps a shortfall of the chain's own wrapped native, never another token", () => {
+    expect(morphoBorrowPlan({ ...p, collateralBalance: 4n, native: 20n })[0]).toMatchObject({ label: "Wrap ETH", to: weth, value: 6n });
+    expect(() => morphoBorrowPlan({ ...p, collateralBalance: 4n, native: 20n, wrappedNative: USDC[8453] })).toThrow(/Not enough collateral/);
   });
   it("never wraps into the gas reserve", () => {
     expect(() => morphoBorrowPlan({ ...p, collateralBalance: 0n, native: 10n })).toThrow(/network fees/);

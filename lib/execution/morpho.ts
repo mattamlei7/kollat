@@ -23,9 +23,6 @@ export const ERC20_ABI = parseAbi([
 ]);
 const WETH_ABI = parseAbi(["function deposit() payable"]);
 
-/** Base WETH; its native ETH can be wrapped into collateral. Same as WNATIVE[8453] in lib/balances. */
-export const BASE_WETH: Address = "0x4200000000000000000000000000000000000006";
-
 export interface MarketParams { loanToken: Address; collateralToken: Address; oracle: Address; irm: Address; lltv: bigint }
 
 export interface PlanStep { label: string; to: Address; data: Hex; value: bigint }
@@ -44,6 +41,9 @@ export interface PlanInput {
   native: bigint;
   /** Native kept back for gas when wrapping. */
   gasReserve: bigint;
+  /** The chain's wrapped native token (WETH, WPOL): a shortfall in it can be wrapped from native. */
+  wrappedNative: Address;
+  nativeSymbol: string;
 }
 
 export function morphoBorrowPlan(p: PlanInput): PlanStep[] {
@@ -51,9 +51,9 @@ export function morphoBorrowPlan(p: PlanInput): PlanStep[] {
   const steps: PlanStep[] = [];
   const shortfall = p.collateral - p.collateralBalance;
   if (shortfall > 0n) {
-    if (p.market.collateralToken.toLowerCase() !== BASE_WETH.toLowerCase()) throw new Error("Not enough collateral in the wallet.");
+    if (p.market.collateralToken.toLowerCase() !== p.wrappedNative.toLowerCase()) throw new Error("Not enough collateral in the wallet.");
     if (p.native - p.gasReserve < shortfall) throw new Error("Not enough ETH to wrap while keeping some for network fees.");
-    steps.push({ label: "Wrap ETH into WETH", to: BASE_WETH, data: encodeFunctionData({ abi: WETH_ABI, functionName: "deposit" }), value: shortfall });
+    steps.push({ label: `Wrap ${p.nativeSymbol}`, to: p.wrappedNative, data: encodeFunctionData({ abi: WETH_ABI, functionName: "deposit" }), value: shortfall });
   }
   if (p.allowance < p.collateral) {
     steps.push({ label: "Allow Morpho to take the collateral", to: p.market.collateralToken, value: 0n,
