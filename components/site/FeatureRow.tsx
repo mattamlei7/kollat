@@ -3,20 +3,20 @@ import Link from "next/link";
 const ROWS = [
   {
     id: "how-it-works",
-    title: "See your borrowing power everywhere at once",
-    body: "One address, seven protocols, six networks. Max borrow, current rate, and utilization for each, ranked.",
+    title: "Compare what each lender would give you",
+    body: "One address, seven protocols, six networks: each one's limit and rate, ranked. Coverage varies by asset.",
     tiles: ["AAVE", "SPK", "COMP", "MRPH", "FLUID", "EUL", "WELL"],
   },
   {
     id: "liquidation",
     title: "Know the liquidation price before you borrow",
-    body: "Every quote carries the collateral price at which the position gets liquidated, computed from the protocol's own LTV and oracle.",
+    body: "Each option shows its yearly cost and the collateral price at which it would be liquidated, from the protocol's own limits and oracle.",
     tiles: ["WETH", "wstETH", "cbBTC", "weETH"],
   },
   {
     id: "networks",
-    title: "Read positions you already hold",
-    body: "Open positions appear with each protocol's own health factor, unmodified — not a normalized score we invented.",
+    title: "Next: borrow and repay yourself",
+    body: "Open positions show each protocol's own health factor. Borrowing and repaying from your wallet is in testing.",
     tiles: ["ETH", "BASE", "ARB", "OP", "POL", "AVAX"],
   },
 ];
@@ -27,8 +27,8 @@ export function FeatureRows() {
     <section className="section" id="how-it-works" aria-labelledby="features">
       <div className="wrap">
         <div className="section-head" data-reveal>
-          <span className="eyebrow">Built for comparison</span>
-          <h2 id="features">Seven lenders, one set of numbers, no wallet required.</h2>
+          <span className="eyebrow">From comparison to loan</span>
+          <h2 id="features">Seven lenders, one set of numbers, your choice of route.</h2>
         </div>
         <div className="features">
           {ROWS.map((r, i) => (

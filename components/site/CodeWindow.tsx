@@ -1,11 +1,11 @@
 import { codeToHtml } from "shiki";
 
-/* Mirrors lib/protocols/aave-v3.ts: server-side reads, no signer anywhere. */
+/* Mirrors lib/protocols/aave-v3.ts: the server-side reads behind every estimate. No signer in this path. */
 const SNIPPET = `import { createPublicClient, http } from "viem";
 import { mainnet } from "viem/chains";
 import { POOL_ABI, UI_POOL_DATA_PROVIDER_ABI } from "./abis";
 
-// A public client can only read. There is no wallet, no signer, no sendTransaction.
+// A public client can only read: this lookup has no wallet, signer or sendTransaction.
 const client = createPublicClient({ chain: mainnet, transport: http(process.env.RPC_URL_MAINNET) });
 
 export async function quote(address: \`0x\${string}\`) {
@@ -29,15 +29,15 @@ export async function quote(address: \`0x\${string}\`) {
   };
 }`;
 
-/** "Read-only by construction": the actual shape of a read, syntax-highlighted at build time. */
+/** How an estimate is read: the actual shape of the lookup, syntax-highlighted at build time. */
 export async function CodeWindow() {
   const html = await codeToHtml(SNIPPET, { lang: "ts", theme: "github-dark-default" });
   return (
     <section className="section" id="read-only" aria-labelledby="transparency">
       <div className="wrap">
         <div className="section-head" data-reveal>
-          <h2 id="transparency">Read-only by construction</h2>
-          <p>There is no write path. See for yourself.</p>
+          <h2 id="transparency">How an estimate is read</h2>
+          <p>Lookups sign nothing. See for yourself.</p>
         </div>
         <div className="code-window" data-reveal>
           <div className="tabs"><span className="tab">quote.ts</span></div>

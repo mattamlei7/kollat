@@ -46,8 +46,8 @@ export function ProtocolConstellation() {
             </span>
           ))}
           <div className="section-head" data-reveal>
-            <h2 id="powered">Reads from the protocols themselves</h2>
-            <p>No aggregator middleman. Positions and rates come straight from each protocol&apos;s contracts.</p>
+            <h2 id="powered">Seven lending protocols, read directly</h2>
+            <p>Independent of the lenders. Rates and positions come from their contracts and public data.</p>
           </div>
         </div>
       </div>

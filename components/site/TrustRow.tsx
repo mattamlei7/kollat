@@ -1,7 +1,7 @@
 const COLS = [
-  { title: "No wallet connection", body: "Nothing to connect, nothing to approve", logos: ["MM", "WC", "CB"] },
-  { title: "No signing, no write path", body: "The app cannot move funds, by construction", logos: ["TX", "SIG"] },
-  { title: "Straight from the contracts", body: "Server-side RPC reads, no cached middleman", logos: ["ETH", "BASE"] },
+  { title: "You sign every step", body: "No wallet to browse. Loans need your OK", logos: ["MM", "WC", "CB"] },
+  { title: "No custody of keys or funds", body: "Collateral goes to the lender, USDC to you", logos: ["TX", "SIG"] },
+  { title: "Transparent data sources", body: "Onchain reads and lender APIs, cached briefly", logos: ["ETH", "BASE"] },
 ];
 
 export function TrustRow() {

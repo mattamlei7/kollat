@@ -9,7 +9,7 @@ const interTight = Inter_Tight({ variable: "--font-inter-tight", subsets: ["lati
 export const metadata: Metadata = {
   title: "Kollat",
   description:
-    "Kollat — read-only DeFi borrow comparison: what an address can borrow against its holdings on Aave, Spark, Compound, Morpho, Fluid, Euler and Moonwell, at what rate, and where it gets liquidated.",
+    "Kollat helps you borrow against crypto without selling it: compare rates, limits and liquidation prices across Aave, Spark, Compound, Morpho, Fluid, Euler and Moonwell on six networks. Wallet-signed borrowing is in testing; Kollat never holds your keys or funds.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

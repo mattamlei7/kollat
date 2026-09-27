@@ -81,11 +81,11 @@ export function Hero({ stats }: { stats: Stats }) {
     <section className="hero-track" aria-label="Introduction">
       <div className="hero">
         <div className="hero-copy" ref={copy}>
-          <h1>Every crypto-backed loan, side by side.</h1>
+          <h1>Borrow against crypto without selling it.</h1>
           <p className="sub">
-            Paste an address. See what it could borrow on Aave, Spark, Compound, Morpho, Fluid, Euler and Moonwell — at what rate, and where it gets liquidated.
+            Paste an address to compare what Aave, Spark, Compound, Morpho, Fluid, Euler and Moonwell would lend against it: rate, limit and liquidation price.
           </p>
-          <AddressInput id="hero-address" note="Read-only. No wallet connection, no signing." />
+          <AddressInput id="hero-address" note="Estimates only. No wallet or signature needed." />
         </div>
         <div className="hero-bottom" ref={bottom}>
           <div className="stats" aria-label="Coverage">

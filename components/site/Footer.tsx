@@ -29,7 +29,7 @@ export function Footer() {
           ))}
         </div>
         <p className="legal" id="legal">
-          Kollat is informational only and is not financial advice. Figures are estimates derived from public chain data and the protocols&apos; own contracts at the time of reading; they can change at any moment. Nothing here is stored, signed or transmitted on your behalf.
+          Kollat is informational and not financial advice. Figures are estimates from chain and protocol data and can change at any moment. Lookups sign nothing. Wallet-signed borrowing, reusable by wallets and exchanges, is in testing and not live here. Kollat never holds your keys or funds.
         </p>
       </div>
     </footer>
