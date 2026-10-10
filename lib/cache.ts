@@ -70,6 +70,7 @@ export async function cachedResult<T>(
   return inflight;
 }
 
-export function invalidate(prefix: string) {
-  for (const k of store.keys()) if (k.startsWith(prefix)) store.delete(k);
+/** Drops every entry whose key contains `fragment`, e.g. an address after it changed a position. */
+export function invalidate(fragment: string) {
+  for (const k of store.keys()) if (k.includes(fragment)) store.delete(k);
 }

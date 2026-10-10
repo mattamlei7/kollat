@@ -11,7 +11,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ address: st
   const { address } = await ctx.params;
   const { searchParams } = new URL(request.url);
   const timeout = new Promise<"timeout">((r) => setTimeout(() => r("timeout"), DEADLINE_MS));
-  const snapshot = await Promise.race([accountSnapshot(decodeURIComponent(address), parseChains(searchParams.get("chain"))), timeout]);
+  const snapshot = await Promise.race([accountSnapshot(decodeURIComponent(address), parseChains(searchParams.get("chain")), searchParams.has("fresh")), timeout]);
   if (snapshot === "timeout") {
     return Response.json({ error: "Upstream RPCs did not answer in time; retry shortly" }, { status: 504 });
   }

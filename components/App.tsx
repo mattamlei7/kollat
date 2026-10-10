@@ -61,6 +61,8 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
   }
 
   const emptyEverywhere = tables.length > 0 && tables.every((t) => t.rows.length === 0);
+  // Hide chains with nothing to borrow, unless a protocol failed to answer there.
+  const shown = tables.filter((t) => t.rows.length > 0 || t.columns.some((c) => c.error));
 
   return (
     <div className="shell">
@@ -147,11 +149,11 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
                     action={{ label: "Read again", onClick: account.refresh }}
                   />
                 ) : (
-                  tables.map((t) => (
+                  shown.map((t) => (
                     <CapacityTable
                       key={t.chainId}
                       table={t}
-                      showChain={tables.length > 1}
+                      showChain={shown.length > 1}
                       selection={selection}
                       tone={simTone}
                       onSelect={select}
@@ -168,7 +170,7 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
               )}
             </section>
 
-            {positions && <Positions positions={positions.positions} errors={positions.errors} owner={account.data.address} onChanged={account.refresh} />}
+            {positions && <Positions positions={positions.positions} errors={positions.errors} owner={account.data.address} onChanged={account.refreshFresh} />}
           </>
         )}
       </div>

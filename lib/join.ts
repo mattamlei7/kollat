@@ -122,7 +122,7 @@ export function buildChainTables(markets: MarketsJson | null, account: AccountJs
         }
       }
       return { holding, cells, best };
-    });
+    }).filter((r) => r.best !== null); // Only holdings some protocol will lend against.
 
     const totals: Record<string, number> = {};
     for (const c of columns) {

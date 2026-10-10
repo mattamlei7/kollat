@@ -1,5 +1,6 @@
 import { isAddress, type Address } from "viem";
 import { normalize } from "viem/ens";
+import { invalidate } from "./cache";
 import { CHAIN_IDS, getClient } from "./chains";
 import { PROTOCOLS } from "./protocols/registry";
 import type {
@@ -132,10 +133,12 @@ export async function resolveInput(input: string): Promise<{ address: Address; e
   return null;
 }
 
-export async function accountSnapshot(input: string, chains: ChainId[]): Promise<AccountSnapshot | null> {
+/** `fresh` skips the account cache, for a read right after the borrower's own transaction. */
+export async function accountSnapshot(input: string, chains: ChainId[], fresh = false): Promise<AccountSnapshot | null> {
   const resolved = await resolveInput(input);
   if (!resolved) return null;
   const { address, ens } = resolved;
+  if (fresh) invalidate(`:${address.toLowerCase()}`);
 
   const protocols = await Promise.all(
     selected(chains).map(async (p) => {

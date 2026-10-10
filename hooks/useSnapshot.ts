@@ -16,18 +16,21 @@ interface State<T> {
 const ACCOUNT_POLL_MS = 30_000;
 const MARKETS_POLL_MS = 60_000;
 
-function usePolled<T>(url: string | null, intervalMs: number): State<T> & { refresh: () => void } {
+function usePolled<T>(url: string | null, intervalMs: number): State<T> & { refresh: () => void; refreshFresh: () => void } {
   const [state, setState] = useState<State<T>>({ data: null, error: null, loading: !!url, fetchedAt: null });
   const abort = useRef<AbortController | null>(null);
 
-  const load = useCallback(async () => {
+  /** `fresh === true` bypasses server and browser caches. Strict check: onClick handlers pass an event. */
+  const load = useCallback(async (fresh?: unknown) => {
     if (!url) return;
     abort.current?.abort();
     const ctrl = new AbortController();
     abort.current = ctrl;
     setState((s) => ({ ...s, loading: true }));
     try {
-      const res = await fetch(url, { signal: ctrl.signal });
+      const res = fresh === true
+        ? await fetch(`${url}${url.includes("?") ? "&" : "?"}fresh=1`, { signal: ctrl.signal, cache: "no-store" })
+        : await fetch(url, { signal: ctrl.signal });
       const body = await res.json();
       if (!res.ok) {
         setState({ data: null, error: body?.error ?? `Request failed (${res.status})`, loading: false, fetchedAt: Date.now() });
@@ -53,7 +56,8 @@ function usePolled<T>(url: string | null, intervalMs: number): State<T> & { refr
     };
   }, [url, intervalMs, load]);
 
-  return { ...state, refresh: load };
+  const refreshFresh = useCallback(() => load(true), [load]);
+  return { ...state, refresh: load, refreshFresh };
 }
 
 export function useMarkets(chain: ChainParam) {

@@ -36,7 +36,10 @@ export function WalletRepay({ view, owner, onChanged }: { view: PositionView; ow
     onChanged?.();
   });
 
-  if (result) return <p className="body-strong" role="status">{result}</p>;
+  if (result) return <div className="flex flex-wrap items-center gap-3">
+    <p className="body-strong" role="status">{result}</p>
+    <button type="button" className="btn btn-quiet" onClick={() => { setResult(null); setInput(""); s.reset(); }}>Repay more</button>
+  </div>;
   if (!open) return <button type="button" className="btn btn-quiet" onClick={() => setOpen(true)}>Repay or close</button>;
   return <div className="flex flex-col gap-3 max-w-md">
     <p className="text-t2"><strong>{modeNote(view.chainId)}</strong> Repayment comes from your wallet{debtToken ? `'s ${debtToken.symbol}` : ""}. Collateral returns to the same wallet.</p>
