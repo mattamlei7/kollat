@@ -1,0 +1,23 @@
+.lq .lq-stage { touch-action: pan-y; outline: none; cursor: ew-resize; }
+.lq .lq-stage:focus-visible { box-shadow: 0 0 0 2px var(--anatomy-blue); border-radius: 8px; }
+/* Lines thicken with the figure: the kit's 0.6px hairline at phone size, about 1px at full width. */
+.lq { container-type: inline-size; }
+.lq .iso-svg { shape-rendering: geometricPrecision; }
+.lq .lq-halo { fill: url(#lq-halo); stroke: none; }
+.lq .lq-halo-stop { stop-color: var(--anatomy-halo); }
+.lq .iso-plate { --anatomy-weight: clamp(1.4px, 0.17cqw, 1.9px); }
+.lq .lq-red { stroke-width: calc(var(--anatomy-weight) * 2.6); }
+.lq .lq-needle { stroke-width: calc(var(--anatomy-weight) * 1.9); }
+.lq .lq-cable { stroke-width: calc(var(--anatomy-weight) * 1.3); }
+
+/* Kollat's palette on the dark theme: near-black surfaces, cool blue-grey lines, periwinkle for the
+   subject, the brand blue for the one lit part, and the app's own negative red for liquidation. */
+.iso.lq[data-theme="dark"] {
+  --anatomy-page: #000000; --anatomy-card: #0b0c0f; --anatomy-text: rgba(255, 255, 255, 0.56); --anatomy-strong: #ffffff; --anatomy-muted: rgba(255, 255, 255, 0.4);
+  --anatomy-paper: #0e1014; --anatomy-face: #15171d; --anatomy-top: #171a21;
+  --anatomy-shade-0: #0a0b0e; --anatomy-shade-1: #0d0f13; --anatomy-shade-2: #111318; --anatomy-shade-3: #14171d;
+  --anatomy-lit-top: #1c2130; --anatomy-lit-shade: #161a26;
+  --anatomy-hi: #a9bdff; --anatomy-mid: #7c8ab8; --anatomy-lo: #4a5677; --anatomy-faint: #2f3750; --anatomy-lit: #4d86ff;
+  --anatomy-halo: #000000; --anatomy-halo-opacity: 0.9; --anatomy-dot: #c4d1ff;
+  --anatomy-red: #f0616d; --anatomy-blue: #4d86ff;
+}

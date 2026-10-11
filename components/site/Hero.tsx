@@ -64,8 +64,9 @@ export function Hero({ stats }: { stats: Stats }) {
       const p = Math.min(1, window.scrollY / (SCROLL_SPAN_VH * window.innerHeight));
       const k = Math.min(1, p / 0.35);
       if (copy.current) {
-        copy.current.style.opacity = String(1 - k);
-        copy.current.style.transform = `translateY(${-40 * k}px)`;
+        // At rest, no transform: the headline then renders as normal text, not a cached layer.
+        copy.current.style.opacity = k ? String(1 - k) : "";
+        copy.current.style.transform = k ? `translateY(${-40 * k}px)` : "";
       }
       if (bottom.current) bottom.current.style.opacity = String(1 - Math.min(1, Math.max(0, (p - 0.35) / 0.25)));
     };

@@ -25,8 +25,8 @@
   --surface-2: #17181b;
   --hairline: rgba(255, 255, 255, 0.08);
   --text: #ffffff;
-  --text-muted: rgba(255, 255, 255, 0.56);
-  --text-faint: rgba(255, 255, 255, 0.34);
+  --text-muted: rgba(255, 255, 255, 0.64);
+  --text-faint: rgba(255, 255, 255, 0.45);
   --accent: #2f6bed;
   --accent-hi: #4d86ff;
   --periwinkle: #a9bdff;
@@ -49,6 +49,7 @@
 
   /* type */
   h1, h2, h3 { font-weight: 300; margin: 0; text-wrap: balance; }
+  h3 { font-weight: 400; }
   h1 { font-size: clamp(36px, 4.2vw, 64px); line-height: 1.08; letter-spacing: -0.02em; }
   h2 { font-size: clamp(28px, 3vw, 44px); line-height: 1.12; letter-spacing: -0.015em; }
   h3 { font-size: clamp(18px, 1.6vw, 24px); line-height: 1.25; font-weight: 400; }
@@ -98,7 +99,7 @@
   /* hero */
   .hero-track { height: 260vh; }
   .hero { position: sticky; top: 0; height: 100vh; display: grid; place-items: center; text-align: center; }
-  .hero-copy { display: flex; flex-direction: column; align-items: center; gap: 24px; max-width: 760px; padding: 0 var(--gutter); will-change: opacity, transform; }
+  .hero-copy { display: flex; flex-direction: column; align-items: center; gap: 24px; max-width: 760px; padding: 0 var(--gutter); }
   .hero-copy p.sub { max-width: 560px; }
   .hero-bottom {
     position: absolute; left: 0; right: 0; bottom: 32px;
@@ -107,7 +108,7 @@
   .stats { display: flex; gap: 40px; }
   .stat { display: flex; flex-direction: column; gap: 4px; }
   .stat .label { font-size: 14px; color: var(--text-faint); }
-  .stat .value { font-size: clamp(24px, 2.2vw, 32px); font-weight: 300; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .stat .value { font-size: clamp(24px, 2.2vw, 32px); font-weight: 400; line-height: 1.1; font-variant-numeric: tabular-nums; }
   .scroll-hint { font-size: 14px; color: var(--text-faint); animation: site-bob 1.5s ease-in-out infinite; }
   @media (max-width: 640px) {
     .hero-bottom { flex-direction: column; align-items: flex-start; gap: 16px; }
@@ -137,8 +138,10 @@
   .constellation .section-head { position: relative; z-index: 1; margin: 0; }
   .chip {
     /* Circle grows with its label so wstETH fits as well as OP. */
-    position: absolute; min-width: 44px; aspect-ratio: 1; padding: 0 10px; box-sizing: border-box; border-radius: 50%; white-space: nowrap;
-    display: grid; place-items: center; font-size: 9.5px; font-weight: 600; letter-spacing: 0.01em;
+    /* Even width (set per label) and whole-pixel centre, so translate(-50%) never lands on a half pixel. */
+    position: absolute; width: var(--d); height: var(--d); box-sizing: border-box; border-radius: 50%; white-space: nowrap;
+    left: var(--x); top: var(--y); left: round(var(--x), 1px); top: round(var(--y), 1px);
+    display: grid; place-items: center; font-size: 11px; font-weight: 600; letter-spacing: 0.01em;
     color: #fff; border: 1px solid rgba(255, 255, 255, 0.12);
     text-align: center; line-height: 1;
     /* left/top are the bubble's centre, not its corner. Static: no drift, no parallax. */
@@ -146,7 +149,7 @@
   }
   @media (max-width: 640px) {
     .constellation { min-height: 480px; }
-    .chip { min-width: 36px; padding: 0 8px; font-size: 10px; }
+    .chip { --d: var(--d-sm); font-size: 10px; }
   }
 
   /* feature rows */
@@ -154,10 +157,16 @@
   .feature { display: grid; grid-template-columns: 1fr 1fr; border-radius: var(--radius-card); overflow: hidden; min-height: 440px; }
   .feature[data-flip="true"] .media { order: 2; }
   .feature .media { background: var(--periwinkle); position: relative; overflow: hidden; display: grid; place-items: center; padding: 40px; }
+  /* Straight, never scaled up or rotated: a resampled screenshot always looks soft. */
   .feature .media img {
-    width: 118%; max-width: none; border-radius: 12px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
-    transform: rotate(-3deg) translate(8%, 6%); border: 1px solid rgba(0, 0, 0, 0.2);
+    display: block; width: 100%; max-width: 640px; height: auto; border-radius: 12px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 0, 0, 0.25);
   }
+  .feature .media img[data-tall] { width: auto; max-width: 100%; max-height: 460px; }
+  .feature .media-figure { padding: clamp(16px, 3vw, 32px); }
+  .feature-solo { grid-template-columns: 1fr; }
+  .feature .media-figure > .iso { width: 100%; max-width: 1040px; }
+  .feature .media-figure { background: radial-gradient(60% 55% at 50% 40%, rgba(47, 107, 237, 0.2), transparent 70%), var(--surface); }
   .feature .text { background: var(--surface); padding: clamp(28px, 4vw, 56px); display: flex; flex-direction: column; gap: 20px; justify-content: center; }
   .tiles { display: flex; gap: 8px; flex-wrap: wrap; }
   .tile {

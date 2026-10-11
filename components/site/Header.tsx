@@ -16,7 +16,7 @@ export function Header() {
     <header className="site-header" data-solid={solid}>
       <div className="wrap">
         <Link href="/" className="brand" aria-label="Kollat home">
-          <Image src="/kollat-wordmark-white.png" alt="Kollat" width={781} height={134} className="wordmark" priority />
+          <Image src="/kollat-wordmark-white.png" alt="Kollat" width={105} height={18} className="wordmark" priority />
         </Link>
         <nav aria-label="Site">
           <Link href="/#protocols">Protocols</Link>

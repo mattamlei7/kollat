@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LiquidationFigure } from "@/components/figures/liquidation/figure";
 
 const ROWS = [
   {
@@ -6,6 +7,8 @@ const ROWS = [
     title: "Compare what each lender would give you",
     body: "One address, seven protocols, six networks: each one's limit and rate, ranked. Coverage varies by asset.",
     tiles: ["AAVE", "SPK", "COMP", "MRPH", "FLUID", "EUL", "WELL"],
+    /** 2x captures of the live borrow screen, shown at half their pixel size. */
+    shot: { src: "/screens/compare.png", width: 835, height: 550, tall: false },
   },
   {
     id: "liquidation",
@@ -18,6 +21,7 @@ const ROWS = [
     title: "Next: borrow and repay yourself",
     body: "Open positions show each protocol's own health factor. Borrowing and repaying from your wallet is in testing.",
     tiles: ["ETH", "BASE", "ARB", "OP", "POL", "AVAX"],
+    shot: { src: "/screens/borrow-rail.png", width: 428, height: 830, tall: true },
   },
 ];
 
@@ -31,11 +35,17 @@ export function FeatureRows() {
           <h2 id="features">Seven lenders, one set of numbers, your choice of route.</h2>
         </div>
         <div className="features">
-          {ROWS.map((r, i) => (
+          {ROWS.map((r, i) => r.id === "liquidation" ? (
+            <article className="feature feature-solo" id={r.id} key={r.id} data-reveal>
+              <div className="media media-figure"><LiquidationFigure /></div>
+            </article>
+          ) : (
             <article className="feature" id={r.id} data-flip={i % 2 === 1} key={r.id} data-reveal>
               <div className="media" aria-hidden="true">
-                {/* eslint-disable-next-line @next/next/no-img-element -- static asset, no optimisation needed */}
-                <img src="/screens/borrow.png" alt="" loading="lazy" width={1534} height={889} />
+                {r.shot ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- pre-sized 2x capture; resizing would only soften it
+                  <img src={r.shot.src} alt="" loading="lazy" width={r.shot.width} height={r.shot.height} data-tall={r.shot.tall || undefined} />
+                ) : null}
               </div>
               <div className="text">
                 <h3>{r.title}</h3>

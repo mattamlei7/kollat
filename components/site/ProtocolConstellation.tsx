@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 /* Positions are % of the section box (bubble centre), kept outside the centre
    copy rectangle (roughly 25–75% x, 30–70% y). */
 const CHIPS: { s: string; c: string; x: number; y: number }[] = [
@@ -29,6 +31,9 @@ const CHIPS: { s: string; c: string; x: number; y: number }[] = [
   { s: "AVAX", c: "#e84142", x: 44, y: 98 },
 ];
 
+/** Always even, so the centred circle sits on whole pixels: grows per letter past three. */
+const diameter = (label: string, perLetter: number) => 40 + perLetter * Math.max(0, label.length - 3);
+
 /** "Powered by" — sits over the starfield reached after the fly-through. */
 export function ProtocolConstellation() {
   return (
@@ -40,7 +45,7 @@ export function ProtocolConstellation() {
               key={c.s}
               className="chip"
               aria-hidden="true"
-              style={{ left: `${c.x}%`, top: `${c.y}%`, background: c.c }}
+              style={{ "--x": `${c.x}%`, "--y": `${c.y}%`, "--d": `${diameter(c.s, 8)}px`, "--d-sm": `${diameter(c.s, 6)}px`, background: c.c } as CSSProperties}
             >
               {c.s}
             </span>
