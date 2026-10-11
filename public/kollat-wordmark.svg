@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="254 240 537 79" fill="#fff" role="img" aria-label="Kollat">
+  <defs>
+    <!-- The blade's gap: a wedge that opens from nothing at its tip to 11 units wide, cutting O, L, L, A, T. -->
+    <mask id="cut" maskUnits="userSpaceOnUse" x="254" y="240" width="537" height="79">
+      <rect x="254" y="240" width="537" height="79" fill="#fff"/>
+      <path d="M343 279 430 273.5H791V284.5H430Z" fill="#000"/>
+    </mask>
+  </defs>
+  <g mask="url(#cut)">
+    <!-- K -->
+    <path d="M297 241h11.5v77H297z"/>
+    <path d="M351 241h13.5l-56 56v-13z"/>
+    <path d="M317.4 276h13.2l34.4 42h-13.2z"/>
+    <!-- O -->
+    <path fill-rule="evenodd" d="M410.5 241a40.5 38.5 0 1 1 0 77a40.5 38.5 0 1 1 0-77Zm0 11a29.3 27.5 0 1 0 0 55a29.3 27.5 0 1 0 0-55Z"/>
+    <!-- L L -->
+    <path d="M468 241h11.5v66.5H522V318h-54z"/>
+    <path d="M535 241h11v67h43V318h-54z"/>
+    <!-- A -->
+    <path d="M630 241h11l-36 77h-11z"/>
+    <path d="M630 241h11l36 77h-11z"/>
+    <path d="M610 290h52v9.5h-52z"/>
+    <!-- T -->
+    <path d="M675 241h64v10h-26.5v67h-11v-67H675z"/>
+  </g>
+  <!-- Blade: a hairline before the K, then a line that thickens from its tip to a rounded end. -->
+  <path d="M255 278.5h39v1h-39z"/>
+  <path d="M343 279 430 277.5H786a1.5 1.5 0 0 1 0 3H430Z"/>
+</svg>

@@ -14,7 +14,7 @@ export function Footer() {
     <footer className="site-footer">
       <div className="wrap">
         <div className="grid">
-          <div><Image src="/kollat-wordmark-white.png" alt="Kollat" width={105} height={18} className="wordmark" priority /></div>
+          <div><Image src="/kollat-wordmark.svg" alt="Kollat" width={122} height={18} unoptimized className="wordmark" priority /></div>
           {COLS.map((c) => (
             <div key={c.title}>
               <h4>{c.title}</h4>

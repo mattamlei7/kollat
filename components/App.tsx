@@ -68,7 +68,7 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
     <div className="shell">
       <nav className="sidebar" aria-label="Primary">
         <Link href="/" className="logo" aria-label="Kollat home">
-          <Image src="/kollat-wordmark-white.png" alt="Kollat" width={781} height={134} className="wordmark" priority />
+          <Image src="/kollat-wordmark.svg" alt="Kollat" width={122} height={18} unoptimized className="wordmark" priority />
         </Link>
         <div className="nav">
           <Link className="nav-item" href="/borrow" aria-current="page">
