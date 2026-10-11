@@ -1,29 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="254 240 537 79" fill="#fff" role="img" aria-label="Kollat">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 20" fill="#fff" role="img" aria-label="Kollat">
+  <!-- Drawn on a pixel grid: one unit is one CSS pixel at 20px tall (two device pixels on 2x screens),
+       so stems are exactly 3px and the blade exactly 1px, with straight edges on whole pixels. Show it at 20px or 40px. -->
   <defs>
-    <!-- The blade's gap: a wedge that opens from nothing at its tip to 11 units wide, cutting O, L, L, A, T. -->
-    <mask id="cut" maskUnits="userSpaceOnUse" x="254" y="240" width="537" height="79">
-      <rect x="254" y="240" width="537" height="79" fill="#fff"/>
-      <path d="M343 279 430 273.5H791V284.5H430Z" fill="#000"/>
+    <!-- The blade's gap: a wedge that opens from its tip to 3px, cutting O, L, L, A, T. -->
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="140" height="20">
+      <rect width="140" height="20" fill="#fff"/>
+      <path d="M23 9.5 45 8H140V11H45Z" fill="#000"/>
     </mask>
   </defs>
   <g mask="url(#cut)">
     <!-- K -->
-    <path d="M297 241h11.5v77H297z"/>
-    <path d="M351 241h13.5l-56 56v-13z"/>
-    <path d="M317.4 276h13.2l34.4 42h-13.2z"/>
+    <path d="M11 0h3v20h-3z"/>
+    <path d="M25 0h3.5L14 14.5V11z"/>
+    <path d="M16.5 9H20l9 11h-3.5z"/>
     <!-- O -->
-    <path fill-rule="evenodd" d="M410.5 241a40.5 38.5 0 1 1 0 77a40.5 38.5 0 1 1 0-77Zm0 11a29.3 27.5 0 1 0 0 55a29.3 27.5 0 1 0 0-55Z"/>
+    <path fill-rule="evenodd" d="M40.5 0a10.5 10 0 1 1 0 20a10.5 10 0 1 1 0-20Zm0 3a7.5 7 0 1 0 0 14a7.5 7 0 1 0 0-14Z"/>
     <!-- L L -->
-    <path d="M468 241h11.5v66.5H522V318h-54z"/>
-    <path d="M535 241h11v67h43V318h-54z"/>
+    <path d="M56 0h3v17h11v3H56z"/>
+    <path d="M73 0h3v17h11v3H73z"/>
     <!-- A -->
-    <path d="M630 241h11l-36 77h-11z"/>
-    <path d="M630 241h11l36 77h-11z"/>
-    <path d="M610 290h52v9.5h-52z"/>
+    <path d="M98 0h3l9 20h-3z"/>
+    <path d="M98 0h3l-9 20h-3z"/>
+    <path d="M93 13h12v3H93z"/>
     <!-- T -->
-    <path d="M675 241h64v10h-26.5v67h-11v-67H675z"/>
+    <path d="M110 0h16v3h-5v17h-3V3h-8z"/>
   </g>
-  <!-- Blade: a hairline before the K, then a line that thickens from its tip to a rounded end. -->
-  <path d="M255 278.5h39v1h-39z"/>
-  <path d="M343 279 430 277.5H786a1.5 1.5 0 0 1 0 3H430Z"/>
+  <!-- Blade: a faint hairline before the K, then a 1px line from its tip to a rounded end. -->
+  <path d="M0 9h10v1H0z" opacity=".55"/>
+  <path d="M23 9.5 45 9H138.5a.5.5 0 0 1 0 1H45Z"/>
 </svg>

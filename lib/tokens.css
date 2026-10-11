@@ -90,7 +90,7 @@
   .site-header nav a:hover { color: var(--text); }
   .site-header .right { justify-self: end; }
   .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500; }
-  .wordmark { height: 18px; width: auto; display: block; }
+  .wordmark { height: 20px; width: auto; display: block; }
   @media (max-width: 860px) {
     .site-header nav { display: none; }
     .site-header .wrap { grid-template-columns: 1fr auto; }
