@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { LiquidationFigure } from "@/components/figures/liquidation/figure";
 
 const ROWS = [
   {
@@ -15,6 +14,7 @@ const ROWS = [
     title: "Know the liquidation price before you borrow",
     body: "Each option shows its yearly cost and the collateral price at which it would be liquidated, from the protocol's own limits and oracle.",
     tiles: ["WETH", "wstETH", "cbBTC", "weETH"],
+    shot: { src: "/screens/liquidation.png", width: 428, height: 210, tall: false },
   },
   {
     id: "networks",
@@ -35,11 +35,7 @@ export function FeatureRows() {
           <h2 id="features">Seven lenders, one set of numbers, your choice of route.</h2>
         </div>
         <div className="features">
-          {ROWS.map((r, i) => r.id === "liquidation" ? (
-            <article className="feature feature-solo" id={r.id} key={r.id} data-reveal>
-              <div className="media media-figure"><LiquidationFigure /></div>
-            </article>
-          ) : (
+          {ROWS.map((r, i) => (
             <article className="feature" id={r.id} data-flip={i % 2 === 1} key={r.id} data-reveal>
               <div className="media" aria-hidden="true">
                 {r.shot ? (

@@ -163,10 +163,6 @@
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 0, 0, 0.25);
   }
   .feature .media img[data-tall] { width: auto; max-width: 100%; max-height: 460px; }
-  .feature .media-figure { padding: clamp(16px, 3vw, 32px); }
-  .feature-solo { grid-template-columns: 1fr; }
-  .feature .media-figure > .iso { width: 100%; max-width: 1040px; }
-  .feature .media-figure { background: radial-gradient(60% 55% at 50% 40%, rgba(47, 107, 237, 0.2), transparent 70%), var(--surface); }
   .feature .text { background: var(--surface); padding: clamp(28px, 4vw, 56px); display: flex; flex-direction: column; gap: 20px; justify-content: center; }
   .tiles { display: flex; gap: 8px; flex-wrap: wrap; }
   .tile {
