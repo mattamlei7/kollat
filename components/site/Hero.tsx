@@ -50,7 +50,37 @@ export function CountUp({ value, prefix = "", digits = 0 }: { value: number; pre
   return <span ref={ref}>{prefix}{new Intl.NumberFormat("en-US", { maximumFractionDigits: digits }).format(value)}</span>;
 }
 
-interface Stats { markets: number; liquidityUsd: number }
+interface Stats { markets: number; liquidityUsd: number; byProtocol: { name: string; usd: number }[]; updatedAt: number }
+
+const usd0 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
+function ago(ms: number) {
+  const min = Math.max(1, Math.round((Date.now() - ms) / 60_000));
+  return min < 60 ? `${min} min ago` : `${Math.round(min / 60)} h ago`;
+}
+
+/** Total USDC borrowable across every network; hover or focus to see it by protocol. */
+function LiquidityStat({ stats }: { stats: Stats }) {
+  const [updated, setUpdated] = useState("");
+  // Worked out when the breakdown opens, so it stays true on a page cached for an hour.
+  const refresh = () => stats.updatedAt && setUpdated(ago(stats.updatedAt));
+  return (
+    <div className="stat stat-liquidity" onPointerEnter={refresh} onFocus={refresh}>
+      <span className="label">USDC available to borrow</span>
+      <span className="value liq-trigger" tabIndex={0} aria-describedby="liq-breakdown">
+        <CountUp value={Math.round(stats.liquidityUsd)} prefix="$" />
+      </span>
+      <div id="liq-breakdown" role="tooltip" className="liq-tip">
+        <dl>
+          {stats.byProtocol.map((p) => (
+            <div key={p.name}><dt>{p.name}</dt><dd>{usd0.format(p.usd)}</dd></div>
+          ))}
+        </dl>
+        <p>Across all supported networks{updated ? ` · Updated ${updated}` : ""}</p>
+      </div>
+    </div>
+  );
+}
 
 export function Hero({ stats }: { stats: Stats }) {
   const copy = useRef<HTMLDivElement>(null);
@@ -76,7 +106,6 @@ export function Hero({ stats }: { stats: Stats }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const liq = stats.liquidityUsd >= 1e9 ? { v: stats.liquidityUsd / 1e9, s: "B" } : { v: stats.liquidityUsd / 1e6, s: "M" };
 
   return (
     <section className="hero-track" aria-label="Introduction">
@@ -89,14 +118,11 @@ export function Hero({ stats }: { stats: Stats }) {
           <AddressInput id="hero-address" note="Estimates only. No wallet or signature needed." />
         </div>
         <div className="hero-bottom" ref={bottom}>
+          {stats.liquidityUsd > 0 && <LiquidityStat stats={stats} />}
           <div className="stats" aria-label="Coverage">
             <div className="stat"><span className="label">Protocols</span><span className="value"><CountUp value={7} /></span></div>
             <div className="stat"><span className="label">Networks</span><span className="value"><CountUp value={6} /></span></div>
             <div className="stat"><span className="label">Markets indexed</span><span className="value"><CountUp value={stats.markets} /></span></div>
-            <div className="stat">
-              <span className="label">Liquidity compared</span>
-              <span className="value"><CountUp value={Math.round(liq.v * 10) / 10} prefix="$" digits={1} />{liq.s}</span>
-            </div>
           </div>
           <div className="scroll-hint">Scroll to explore</div>
         </div>

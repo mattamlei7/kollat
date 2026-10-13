@@ -104,10 +104,16 @@ export function Badge({ children }: { children: React.ReactNode }) {
 }
 
 /** Circular token/protocol mark from initials. No logos shipped. */
-export function Avatar({ text, large }: { text: string; large?: boolean }) {
+/** Token logo when one is known; the symbol's letters otherwise. */
+export function Avatar({ text, large, token }: { text: string; large?: boolean; token?: { chainId: number; address: string } }) {
+  const src = token ? `/api/token-logo/${token.chainId}/${token.address}?s=${encodeURIComponent(text)}` : null;
+  const [failed, setFailed] = useState<string | null>(null);
   return (
     <span className={`avatar${large ? " avatar-lg" : ""}`} aria-hidden>
-      {text.replace(/^[a-z]+/, "").slice(0, 3).toUpperCase() || text.slice(0, 3).toUpperCase()}
+      {src && failed !== src
+        // eslint-disable-next-line @next/next/no-img-element -- 32px logo behind a redirect; nothing for next/image to optimise
+        ? <img src={src} alt="" loading="lazy" onError={() => setFailed(src)} ref={(el) => { if (el?.complete && el.naturalWidth === 0) setFailed(src); }} />
+        : text.replace(/^[a-z]+/, "").slice(0, 3).toUpperCase() || text.slice(0, 3).toUpperCase()}
     </span>
   );
 }
@@ -127,6 +133,9 @@ export function Chip({ tone: t, children }: { tone: Tone; children: React.ReactN
 const PATHS = {
   home: "M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z",
   borrow: "M3 7h18v10H3zM3 11h18M7 15h3",
+  lend: "M12 3v12M7 10l5 5 5-5M4 20h16",
+  wallet: "M4 7h15a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM4 7l11-3v3M16 13.5h1",
+  logout: "M14 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 16l-4-4 4-4M6 12h10",
   positions: "M4 19h16M6 15l4-5 4 3 5-7",
   lock: "M6 11V8a6 6 0 0 1 12 0v3M5 11h14v10H5z",
   search: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4",
@@ -143,5 +152,18 @@ export function Icon({ name, className }: { name: keyof typeof PATHS; className?
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
       <path d={PATHS[name]} />
     </svg>
+  );
+}
+
+/** A tooltip with free text, on hover and keyboard focus: for reasons too long to print in a table cell. */
+export function Tip({ text, children, right }: { text: string; children: React.ReactNode; right?: boolean }) {
+  const id = useId();
+  return (
+    <span className="def tip" tabIndex={0} aria-describedby={id}>
+      {children}
+      <span role="tooltip" id={id} className={`def-tip${right ? " right" : ""}`}>
+        {text}
+      </span>
+    </span>
   );
 }

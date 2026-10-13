@@ -262,6 +262,7 @@ body {
   flex: none;
 }
 .avatar-lg { width: 46px; height: 46px; font-size: 14px; }
+.avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 
 /* ---- Tables: full-bleed rows, cells inside the gutter ---- */
 .blotter { width: 100%; border-collapse: collapse; }
@@ -296,6 +297,7 @@ body {
   height: 52px;
 }
 .blotter td .primary { font-size: 16px; line-height: 24px; }
+.amount-error { display: block; margin-top: 4px; max-width: 22rem; }
 .sub { color: var(--fg-muted); font-weight: 400; font-size: 14px; line-height: 20px; }
 .blotter .sub { display: block; }
 .name-cell { display: flex; align-items: center; gap: 16px; }
@@ -566,3 +568,212 @@ select.ctl {
   white-space: nowrap;
   border: 0;
 }
+
+/* Folded rail sections: collateral, market parameters, know before you borrow. */
+.rail-section > summary { list-style: none; }
+.rail-section > summary::-webkit-details-marker { display: none; }
+.rail-section > summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 8px; }
+.rail-section-chev { width: 16px; height: 16px; transition: transform 150ms ease; }
+.rail-section[open] .rail-section-chev { transform: rotate(90deg); }
+/* The rail (a bottom sheet on small screens) stays above the table's pinned Asset column. */
+.rail { z-index: 2; }
+
+/* ---- Borrow tab: one workspace, staged (collateral → loan → rates), rail summary on the right ---- */
+.borrow { --rail-w: 360px; }
+.borrow .stage { padding: 24px var(--gutter); border-bottom: 1px solid var(--line); }
+
+/* Compact bordered lists in the table style: one row per holding or route, columns aligned. */
+.borrow .pick-list,
+.borrow .route-list { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.borrow .pick-head,
+.borrow .pick-row { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 84px; align-items: center; gap: 12px; padding: 0 16px; }
+.borrow .route-head,
+.borrow .route-row { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 96px; align-items: center; gap: 12px; padding: 0 16px; }
+.borrow .pick-head,
+.borrow .route-head { min-height: 40px; color: var(--fg-muted); font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--line); }
+.borrow .pick-row,
+.borrow .route-row { min-height: 60px; padding-block: 8px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background-color 120ms ease; }
+.borrow .pick-row:last-child,
+.borrow .route-row:last-child { border-bottom: 0; }
+.borrow .pick-row:hover,
+.borrow .route-row:hover { background: var(--row-hover); }
+.borrow .pick-row-static,
+.borrow .route-row-static { cursor: default; }
+.borrow .pick-row-static:hover,
+.borrow .route-row-static:hover { background: none; }
+/* Selection is blue: an edge and a quiet wash, never a green row. */
+.borrow .pick-row[data-selected],
+.borrow .route-row[data-selected] { background: var(--wash-primary); box-shadow: inset 3px 0 0 var(--primary); }
+.borrow .pick-row:has(input:focus-visible),
+.borrow .route-row:has(input:focus-visible) { outline: 2px solid var(--primary); outline-offset: -2px; }
+.borrow .num-col { text-align: right; justify-self: end; }
+.borrow .pick-asset { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.borrow .pick-action { justify-self: end; font-size: 14px; font-weight: 600; color: var(--fg-muted); }
+.borrow [data-selected] .pick-action { color: var(--primary); }
+.borrow .route-name { display: flex; flex-direction: column; min-width: 0; }
+.borrow .route-rate { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.borrow .route-rate .body-strong { font-size: 18px; line-height: 24px; }
+.borrow .route-cell-label { display: none; }
+.borrow .route-action { justify-self: end; text-align: right; }
+.borrow .route-row-static { grid-template-columns: minmax(0, 1.7fr) minmax(0, 3fr); }
+.borrow .route-why > summary { cursor: pointer; list-style: none; }
+.borrow .route-why > summary::-webkit-details-marker { display: none; }
+.borrow .route-why[open] { max-width: 260px; }
+.borrow .route-empty { border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.borrow .collateral-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.borrow .loan-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; }
+@media (prefers-reduced-motion: reduce) {
+  .borrow .pick-row, .borrow .route-row { transition: none; }
+}
+
+@media (max-width: 1279px) {
+  .borrow { --rail-w: 340px; }
+}
+/* Below 1024px the summary follows the comparison instead of squeezing it; no sheet covers inputs or risk. */
+/* "Your loans" sits in its own cell so it can follow the summary on one-column layouts. */
+.borrow.shell { grid-template-rows: auto 1fr; }
+.borrow > .sidebar, .borrow > .rail { grid-row: 1 / span 2; }
+.borrow > .rail { grid-column: 3; }
+.borrow > .borrow-loans { grid-column: 2; }
+@media (max-width: 1023px) {
+  .borrow.shell { grid-template-rows: none; align-content: start; }
+  .borrow > .rail, .borrow > .borrow-loans { grid-row: auto; grid-column: auto; }
+  .borrow .rail { position: static; height: auto; max-height: none; overflow: visible; border-top: 1px solid var(--line); }
+}
+@media (max-width: 640px) {
+  .borrow .loan-inputs { grid-template-columns: 1fr; }
+  .borrow .pick-head, .borrow .route-head { display: none; }
+  .borrow .pick-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "asset value" "network available"; row-gap: 2px; }
+  .borrow .pick-row > :nth-child(2) { grid-area: asset; }
+  .borrow .pick-row > :nth-child(3) { grid-area: network; font-size: 14px; }
+  .borrow .pick-row > :nth-child(4) { grid-area: available; }
+  .borrow .pick-row > :nth-child(5) { grid-area: value; }
+  .borrow .pick-row > .pick-action { display: none; }
+  .borrow .route-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name rate" "interest drop" "action action"; row-gap: 6px; }
+  .borrow .route-row > .route-name { grid-area: name; }
+  .borrow .route-row > .route-rate { grid-area: rate; }
+  .borrow .route-row > :nth-child(4) { grid-area: interest; justify-self: start; text-align: left; }
+  .borrow .route-row > :nth-child(5) { grid-area: drop; }
+  .borrow .route-row > .route-action { grid-area: action; justify-self: start; }
+  .borrow .route-cell-label { display: block; font-size: 12px; color: var(--fg-muted); }
+  .borrow .route-row-static { grid-template-areas: none; grid-template-columns: 1fr; }
+  .borrow .route-row-static > * { grid-area: auto; }
+  .borrow .pick-row-static { grid-template-areas: none; }
+  .borrow .pick-row-static > * { grid-area: auto; }
+  .borrow .pick-row-static > :last-child { grid-column: 1 / -1; }
+}
+
+/* Loan-to-value slider: green to red up to the liquidation threshold, with a tick at the route's max LTV. */
+.borrow .health { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+.borrow .health-track { position: relative; height: 24px; display: flex; align-items: center; }
+.borrow .health-track input { appearance: none; -webkit-appearance: none; width: 100%; height: 8px; margin: 0; border-radius: 999px; cursor: pointer;
+  background: linear-gradient(to right, var(--positive) 0%, var(--positive) 40%, var(--warning) 75%, var(--negative) 100%); }
+.borrow .health-track input::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--bg); border: 3px solid var(--tone); box-shadow: 0 1px 4px rgb(0 0 0 / 0.4); }
+.borrow .health-track input::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--bg); border: 3px solid var(--tone); }
+.borrow .health-track input:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
+.borrow .health-max { position: absolute; left: calc(10px + (100% - 20px) * var(--max)); top: 2px; bottom: 2px; width: 2px; margin-left: -1px; background: var(--fg); pointer-events: none; }
+.borrow .health[data-tone="safe"] { --tone: var(--positive); }
+.borrow .health[data-tone="caution"] { --tone: var(--warning); }
+.borrow .health[data-tone="danger"] { --tone: var(--negative); }
+
+/* ---- Lend tab: same shell, stage and table language as Borrow ---- */
+.lend .topbar { align-items: flex-start; }
+.lend .stage-note { padding: 12px var(--gutter) 0; }
+.lend .asset-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.lend .asset-opt { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; transition: background-color 120ms ease; }
+.lend .asset-opt:hover { background: var(--row-hover); }
+.lend .asset-opt[data-selected] { background: var(--wash-primary); border-color: var(--primary); }
+.lend .asset-opt:has(input:focus-visible) { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.lend .earn-list { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.lend .earn-head,
+.lend .earn-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(132px, 1fr) minmax(0, 1.1fr) minmax(0, 1fr) 96px; align-items: center; gap: 12px; padding: 0 16px; }
+.lend .earn-head { min-height: 40px; color: var(--fg-muted); font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--line); }
+.lend .earn-head .num-col, .lend .earn-row .num-col { text-align: right; justify-self: end; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.lend .earn-item { border-bottom: 1px solid var(--line); transition: background-color 120ms ease; }
+.lend .earn-item:last-child { border-bottom: 0; }
+.lend .earn-item:hover { background: var(--row-hover); }
+.lend .earn-item[data-selected] { background: var(--wash-primary); box-shadow: inset 3px 0 0 var(--primary); }
+.lend .earn-item[data-muted] .earn-row { cursor: default; }
+.lend .earn-item[data-muted] .earn-dest, .lend .earn-item[data-muted] .num-col { opacity: 0.7; }
+.lend .earn-row { min-height: 64px; cursor: pointer; }
+.lend .earn-row:has(input:focus-visible) { outline: 2px solid var(--primary); outline-offset: -2px; }
+.lend .earn-dest, .lend .earn-wd { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.lend .earn-action { justify-self: end; text-align: right; }
+.lend .badge { white-space: nowrap; }
+.lend .earn-item { position: relative; }
+.lend .earn-row { padding-block: 12px; }
+.lend .earn-action { align-self: start; padding-top: 2px; }
+.lend .earn-toggle { position: absolute; top: 34px; right: 16px; font-size: 13px; }
+.lend .earn-cell-label { display: none; }
+.lend .earn-details { margin: 0 16px 16px; padding: 12px 14px; border-radius: 10px; background: var(--bg-alt); font-size: 14px; }
+.lend .earn-details dl { display: grid; gap: 6px; margin: 0; }
+.lend .earn-details dl > div { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 12px; }
+.lend .earn-details dd { margin: 0; overflow-wrap: anywhere; }
+.lend .earn-alloc { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 4px 16px; margin-top: 6px; }
+.lend .earn-alloc li { display: flex; justify-content: space-between; gap: 8px; color: var(--fg-muted); }
+
+.lend .deposit-item { border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+.lend .deposit-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 0.7fr) auto; gap: 12px; align-items: center; }
+.lend .deposit-panel { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); max-width: 520px; }
+
+@media (max-width: 1279px) {
+  .lend .earn-head, .lend .earn-row { grid-template-columns: minmax(0, 1.7fr) minmax(132px, 1fr) minmax(0, 1.1fr) minmax(0, 1fr) 88px; gap: 10px; }
+}
+@media (max-width: 1023px) {
+  .lend .deposit-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lend .deposit-row > :last-child { grid-column: 1 / -1; justify-content: flex-start; }
+}
+@media (max-width: 640px) {
+  .lend .earn-head { display: none; }
+  .lend .earn-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "dest apy" "earn wd" "action action"; row-gap: 8px; padding-block: 12px 4px; }
+  .lend .earn-row > .earn-dest { grid-area: dest; }
+  .lend .earn-row > :nth-child(3) { grid-area: apy; }
+  .lend .earn-row > :nth-child(4) { grid-area: earn; justify-self: start; align-items: flex-start; text-align: left; }
+  .lend .earn-row > .earn-wd { grid-area: wd; justify-self: end; text-align: right; }
+  .lend .earn-row > .earn-action { grid-area: action; }
+  .lend .earn-row { padding-bottom: 12px; }
+  /* Collapsed: Details shares the Select line. Expanded: it follows the details, where it closes them. */
+  .lend .earn-toggle, .lend .earn-item[data-muted] .earn-toggle { top: auto; right: auto; left: 16px; bottom: 12px; }
+  .lend .earn-toggle[aria-expanded="true"] { position: static; margin: 0 16px 12px; }
+  .lend .earn-cell-label { display: block; font-size: 12px; color: var(--fg-muted); }
+  .lend .earn-details dl > div { grid-template-columns: 1fr; gap: 0; }
+  .lend .deposit-row { grid-template-columns: 1fr; }
+}
+
+/* ---- Wallet control (top right on Borrow and Lend) ---- */
+.wallet-control { margin-left: auto; display: flex; align-items: center; gap: 8px; position: relative; }
+.btn-net { gap: 6px; padding: 0 10px 0 8px; }
+.net-chev { width: 16px; height: 16px; transform: rotate(90deg); color: var(--fg-muted); }
+.net-icon { border-radius: 50%; flex: none; object-fit: cover; }
+.net-icon-text { display: inline-grid; place-items: center; background: var(--bg-2); font-size: 11px; font-weight: 600; color: var(--fg); }
+.wallet-address { cursor: default; }
+.wallet-error { position: absolute; right: 0; top: calc(100% + 4px); white-space: nowrap; }
+.net-dialog { margin: auto; inset: 0; max-height: calc(100vh - 32px); overflow: auto; width: min(640px, calc(100vw - 32px)); padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--bg); color: var(--fg); }
+.net-dialog::backdrop { background: rgb(0 0 0 / 0.6); }
+.net-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.net-option { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 120px; padding: 16px 8px; border: 1px solid var(--line); border-radius: 12px; background: transparent; color: var(--fg); cursor: pointer; transition: background-color 120ms ease; }
+.net-option:hover { background: var(--row-hover); }
+.net-option[aria-pressed="true"] { border-color: var(--primary); background: var(--wash-primary); }
+.net-option:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.net-connected { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--wash-positive); color: var(--positive); }
+@media (max-width: 640px) { .net-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .net-option { min-height: 96px; } }
+.wallet-menu { position: relative; }
+.wallet-menu > .btn { gap: 8px; }
+.wallet-glyph { display: inline-grid; place-items: center; width: 20px; height: 20px; font-size: 16px; line-height: 1; }
+.wallet-glyph svg { width: 18px; height: 18px; }
+.wallet-glyph-lg { width: 40px; height: 40px; font-size: 32px; }
+.wallet-glyph-lg svg { width: 28px; height: 28px; }
+.wallet-pop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; width: 240px; padding: 8px; border: 1px solid var(--line); border-radius: 16px; background: var(--bg); box-shadow: 0 16px 40px rgb(0 0 0 / 0.45); }
+.wallet-pop-head { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 8px; margin-bottom: 4px; border-radius: 12px; background: var(--bg-alt); }
+.wallet-copy { width: 28px; height: 28px; font-size: 14px; color: var(--fg-muted); }
+.wallet-pop-item { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px; border-radius: 10px; font-weight: 600; color: var(--fg); background: transparent; text-align: left; }
+.wallet-pop-item + .wallet-pop-item { border-top: 1px solid var(--line); border-radius: 0 0 10px 10px; }
+.wallet-pop-item:hover, .wallet-pop-item:focus-visible { background: var(--row-hover); outline: none; }
+.lend .earn-item[data-muted] .earn-toggle { top: 50px; }
+.lend .asset-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.wallet-pop-item svg { width: 18px; height: 18px; color: var(--fg-muted); }
+.wallet-lookup { display: flex; flex-direction: column; gap: 6px; padding: 8px 4px 10px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+.wallet-lookup .ctl { height: 40px; min-width: 0; }
+.wallet-pop:has(.wallet-lookup) { width: 300px; }
+.viewing-note { flex: 1 0 100%; }

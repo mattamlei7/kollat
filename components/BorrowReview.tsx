@@ -13,6 +13,9 @@ export function reviewIssue(sim: Sim, unavailable?: string | null): string | nul
   if (unavailable) return unavailable;
   if (sim.col.error || sim.col.stale) return "This option needs fresh data before you can review it.";
   if (!sim.withinCapacity || sim.amount <= 0) return "Choose a positive amount within this option’s limit.";
+  // The same eligibility rule the table and the rail use.
+  if (sim.check.status === "no-data") return "This option needs fresh data before you can review it.";
+  if (sim.check.status === "short") return "This route cannot fund the requested amount. Choose another route or lower the amount.";
   if (sim.apy === null || !Number.isFinite(sim.apy) || sim.apy < 0) return "The borrowing rate is unavailable. Refresh before reviewing.";
   if (!Number.isFinite(sim.hf) || sim.hf <= 1) return "This estimate reaches liquidation immediately. Lower the borrowing amount.";
   if (!PROTOCOL_URL[sim.col.id]) return "This protocol has no supported handoff.";
@@ -23,7 +26,7 @@ export function reviewIssue(sim: Sim, unavailable?: string | null): string | nul
 export function reviewTerms(sim: Sim): string {
   return JSON.stringify([
     sim.table.chainId, sim.col.id, sim.cell.market.id, sim.row.holding.token.address,
-    sim.amount, sim.max, sim.apy, sim.costPerYear, sim.hf, sim.liq, sim.existingDebt,
+    sim.amount, sim.max, sim.share, sim.check.status, sim.apy, sim.costPerYear, sim.hf, sim.liq, sim.existingDebt,
     sim.cell.market.collateralPriceUsd, sim.cell.market.liquidationThreshold,
     sim.cell.market.liquidationPenalty, sim.cell.capacity.collateralUsd, sim.row.holding.units, sim.units,
   ]);

@@ -81,7 +81,7 @@ function comparisonTable(max = 20_000): ChainTable {
 describe("fixed requested borrow amount", () => {
   it("keeps $5,000 when switching between routes with different capacities", () => {
     const routes = comparisonTable();
-    const first = simulate([routes], sel, 5_000)!;
+    const first = simulate([routes], sel, 5_000, null, 10)!;
     const second = simulate([routes], { ...sel, colKey: "spark:1" }, first.amount)!;
     expect(first.amount).toBe(5_000);
     expect(second.amount).toBe(5_000);
@@ -101,15 +101,16 @@ describe("fixed requested borrow amount", () => {
   });
 
   it("does not suggest a cheaper route that cannot support the same amount", () => {
-    expect(simulate([comparisonTable(4_999)], sel, 5_000)!.cheaper).toBeNull();
-    expect(simulate([comparisonTable(5_000)], sel, 5_000)!.cheaper?.col.id).toBe("spark");
+    // The same 10 WETH of collateral on both routes.
+    expect(simulate([comparisonTable(4_999)], sel, 5_000, null, 10)!.cheaper).toBeNull();
+    expect(simulate([comparisonTable(5_000)], sel, 5_000, null, 10)!.cheaper?.selection.colKey).toBe("spark:1");
   });
 
   it("does not suggest stale or failed cheaper routes", () => {
     for (const overrides of [{ stale: true }, { error: "Unavailable" }]) {
       const routes = comparisonTable();
       routes.columns[1] = { ...routes.columns[1], ...overrides };
-      expect(simulate([routes], sel, 5_000)!.cheaper).toBeNull();
+      expect(simulate([routes], sel, 5_000, null, 10)!.cheaper).toBeNull();
     }
   });
 
@@ -132,37 +133,40 @@ describe("fixed requested borrow amount", () => {
   });
 
   function renderSimulator(max: number, amount = 5_000) {
-    const sim = simulate([comparisonTable(max)], { ...sel, colKey: "spark:1" }, amount)!;
+    const sim = simulate([comparisonTable(max)], { ...sel, colKey: "spark:1" }, amount, null, 10)!;
     return renderToStaticMarkup(createElement(Rail, {
-      sim, hint: "", positions: null, onAmount: () => {}, onShare: () => {}, onSelect: () => {}, view: "sim", onView: () => {},
+      sim, hint: "Enter a collateral amount and a borrow amount, then select a route.", positions: null, onSelect: () => {}, view: "sim", onView: () => {},
     }));
   }
 
-  it("renders an over-limit warning without changing the input or offering an external handoff", () => {
+  it("renders an over-limit warning without changing the requested amount or offering an external handoff", () => {
     const html = renderSimulator(3_000);
-    expect(html).toContain('value="5000"');
-    expect(html).toContain('aria-invalid="true"');
-    expect(html).toContain("cannot support your requested $5,000.00");
-    expect(html).toContain("Estimated maximum: $3,000.00");
-    expect(html).toContain("below requested amount");
-    expect(html).toContain("Amount exceeds this option’s limit");
+    // The amount is typed above the table; the rail reads it back unchanged.
+    expect(html).toContain("5,000 USDC");
+    // Inputs live in the main column; the summary never edits them.
+    expect(html).not.toContain("<input");
+    expect(html).toContain("Spark cannot fund 5,000 USDC with this collateral");
+    expect(html).toContain("2,000 below your 5,000");
+    expect(html).toContain("This route cannot fund your loan");
     expect(html).not.toContain("Open Spark");
   });
 
   it("offers review before handoff within capacity, but not for zero", () => {
     expect(renderSimulator(5_000)).toContain("Review borrow");
     expect(renderSimulator(5_000)).not.toContain("Open Spark");
-    expect(renderSimulator(5_000)).toContain("liquidator bonus");
+    // Liquidation exposure stays visible; the detailed assumptions fold under one heading.
+    expect(renderSimulator(5_000)).toContain("below today");
+    expect(renderSimulator(5_000)).toContain("Know before you borrow");
     expect(renderSimulator(5_000, 0)).not.toContain("Open Spark");
-    expect(renderSimulator(5_000, 0)).toContain("Enter a borrow amount");
-    // Zero shows an empty field, so typing a digit does not append to a leading 0.
-    expect(renderSimulator(5_000, 0)).toContain('value=""');
+    // Before an amount: one instruction, no blank figures or infinite health factor.
+    expect(renderSimulator(5_000, 0)).toContain("Enter a collateral amount and a borrow amount, then select a route.");
+    expect(renderSimulator(5_000, 0)).not.toContain("Review borrow");
+    expect(renderSimulator(5_000, 0)).not.toContain("∞");
   });
 
   it("caps the displayed USDC amount at two decimals without rounding simulation inputs", () => {
     const amount = 1_234.567891;
-    const input = renderSimulator(5_000, amount).match(/<input[^>]*id="sim-amount"[^>]*>/)?.[0];
-    expect(input).toContain('value="1234.57"');
+    expect(renderSimulator(5_000, amount)).toContain("1,234.57 USDC");
     const result = simulate([table], sel, amount)!;
     expect(result.amount).toBe(amount);
     expect(result.hf).toBeCloseTo((10 * 2500 * 0.83) / amount, 10);

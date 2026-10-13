@@ -18,7 +18,7 @@ import { CHAIN_LABEL } from "@/lib/client-types";
  * Neither set: the borrow screen stays a read-only preview.
  */
 export const FORK_RPC = process.env.NEXT_PUBLIC_FORK_RPC_URL || undefined;
-const FORK_OF = Number(process.env.NEXT_PUBLIC_FORK_OF) || 8453;
+export const FORK_OF = Number(process.env.NEXT_PUBLIC_FORK_OF) || 8453;
 const FORK_CHAIN_ID = Number(process.env.NEXT_PUBLIC_FORK_CHAIN_ID) || FORK_OF;
 export const MAINNET = !FORK_RPC && process.env.NEXT_PUBLIC_EXECUTION === "mainnet";
 export const CAP_USD = Number(process.env.NEXT_PUBLIC_EXECUTION_CAP_USD) || 100;
@@ -30,17 +30,17 @@ export const executable = (protocolId: string, chainId: number) =>
 export const modeNote = (chainId: number) => FORK_RPC ? "Local fork. No real funds move." : `Real funds on ${CHAIN_LABEL[chainId]}. Your wallet signs every step.`;
 
 /** The chain the wallet signs on: the real one, or the fork under its own id. Contracts are the real chain's either way. */
-function chainFor(chainId: number): Chain {
+export function chainFor(chainId: number): Chain {
   const real = CHAINS[chainId];
   return FORK_RPC ? defineChain({ ...real, id: FORK_CHAIN_ID, name: `${real.name} (local fork)`, rpcUrls: { default: { http: [FORK_RPC] } } }) : real;
 }
 
-function provider() {
+export function provider() {
   const eth = (globalThis as { ethereum?: EIP1193Provider }).ethereum;
   if (!eth) throw new Error("No browser wallet found. Install or unlock one, then try again.");
   return eth;
 }
-const wallet = (chainId: number) => createWalletClient({ chain: chainFor(chainId), transport: custom(provider()) });
+export const wallet = (chainId: number) => createWalletClient({ chain: chainFor(chainId), transport: custom(provider()) });
 /** Independent reads: the fork, or the chain's public RPC. Never the wallet's own view. */
 export const reader = (chainId: number) => createPublicClient({ chain: chainFor(chainId), transport: http(FORK_RPC ?? CHAINS[chainId].rpcUrls.default.http[0]) });
 

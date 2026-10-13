@@ -30,10 +30,17 @@ export type Cell =
   | { kind: "capacity"; market: MarketJson; capacity: CapacityJson; rate: RateJson | null }
   | { kind: "unavailable"; reason: string };
 
+/** Whether a holding can back a loan: some route lends against it, none does, or a protocol read failed so we cannot tell. */
+export type HoldingStatus = "supported" | "unsupported" | "data-unavailable";
+
 export interface Row {
   holding: HoldingJson;
+  status?: HoldingStatus;
+  /** One cell per protocol: its largest active market for this collateral, or why there is none. */
   cells: Record<string, Cell>;
-  /** Column key with the largest max borrow, if any. */
+  /** Every active market per protocol for this collateral (some protocols list several, with different terms). */
+  options?: Record<string, Extract<Cell, { kind: "capacity" }>[]>;
+  /** Column key with the largest max borrow, if any. Used to pick a starting route, never shown as a recommendation. */
   best: string | null;
 }
 
@@ -43,6 +50,17 @@ export interface ChainTable {
   rows: Row[];
   totals: Record<string, number>;
 }
+
+/** The markets a protocol offers for this holding, falling back to its single cell. */
+export function marketsOf(row: Row, colKey: string): Extract<Cell, { kind: "capacity" }>[] {
+  const listed = row.options?.[colKey];
+  if (listed?.length) return listed;
+  const cell = row.cells[colKey];
+  return cell?.kind === "capacity" ? [cell] : [];
+}
+
+/** A holding is supported when any protocol lends against it. */
+export const statusOf = (row: Row): HoldingStatus => row.status ?? (Object.values(row.cells).some((c) => c.kind === "capacity") ? "supported" : "unsupported");
 
 export function marketIndex(markets: MarketsJson | null) {
   const byId = new Map<string, MarketJson>();
@@ -86,13 +104,15 @@ export function buildChainTables(markets: MarketsJson | null, account: AccountJs
         chainId: p.chainId,
         label: p.name,
         error: capErr ?? marketsErr,
-        stale: (p.capacity.ok && p.capacity.stale) || (mp?.markets.ok ? mp.markets.stale : false),
+        // A stale rate read counts too: rates are what the comparison ranks.
+        stale: (p.capacity.ok && p.capacity.stale) || (mp?.markets.ok ? mp.markets.stale : false) || (mp?.rates.ok ? mp.rates.stale : false),
       };
     });
 
     const holdings = account.holdings.filter((h) => h.token.chainId === chainId);
     const rows: Row[] = holdings.map((holding) => {
       const cells: Record<string, Cell> = {};
+      const options: Row["options"] = {};
       let best: string | null = null;
       let bestValue = 0;
       for (const p of protos) {
@@ -101,28 +121,36 @@ export function buildChainTables(markets: MarketsJson | null, account: AccountJs
           cells[key] = { kind: "unavailable", reason: "unavailable" };
           continue;
         }
-        // The market whose collateral is this holding's token.
-        const cap = p.capacity.data.find((c) => {
-          const m = byId.get(c.marketId);
-          return m && m.collateral.address.toLowerCase() === holding.token.address.toLowerCase();
-        });
-        const market = cap ? byId.get(cap.marketId) : undefined;
-        if (!cap || !market) {
+        // Every market whose collateral is this holding's token.
+        const listed = p.capacity.data
+          .map((c) => ({ c, m: byId.get(c.marketId) }))
+          .filter((x): x is { c: CapacityJson; m: MarketJson } => !!x.m && x.m.collateral.address.toLowerCase() === holding.token.address.toLowerCase());
+        if (!listed.length) {
           cells[key] = { kind: "unavailable", reason: "not listed" };
           continue;
         }
-        if (market.status !== "active") {
-          cells[key] = { kind: "unavailable", reason: statusReason(market.status) };
+        const active = listed.filter((x) => x.m.status === "active");
+        if (!active.length) {
+          cells[key] = { kind: "unavailable", reason: statusReason(listed[0].m.status) };
           continue;
         }
-        cells[key] = { kind: "capacity", market, capacity: cap, rate: rateById.get(market.id) ?? null };
-        if (cap.maxBorrowUsd > bestValue) {
-          bestValue = cap.maxBorrowUsd;
+        const opts = active
+          .map(({ c, m }) => ({ kind: "capacity" as const, market: m, capacity: c, rate: rateById.get(m.id) ?? null }))
+          .sort((a, b) => b.capacity.maxBorrowUsd - a.capacity.maxBorrowUsd);
+        options[key] = opts;
+        cells[key] = opts[0];
+        if (opts[0].capacity.maxBorrowUsd > bestValue) {
+          bestValue = opts[0].capacity.maxBorrowUsd;
           best = key;
         }
       }
-      return { holding, cells, best };
-    }).filter((r) => r.best !== null); // Only holdings some protocol will lend against.
+      const status: HoldingStatus = Object.values(options).length
+        ? "supported"
+        : Object.values(cells).some((c) => c.kind === "unavailable" && c.reason === "unavailable")
+          ? "data-unavailable"
+          : "unsupported";
+      return { holding, status, cells, options, best };
+    });
 
     const totals: Record<string, number> = {};
     for (const c of columns) {

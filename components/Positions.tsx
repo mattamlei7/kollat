@@ -19,9 +19,9 @@ interface Props {
 export function Positions({ positions, errors, owner, onChanged }: Props) {
   return (
     <section aria-labelledby="positions" id="positions" className="section">
-      <div className="row flex items-baseline gap-3">
-        <h2 id="positions" className="heading">Positions</h2>
-        {positions.length === 0 && errors.length === 0 && <span className="text-t2">None on the supported protocols</span>}
+      <div className="row flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h2 id="positions" className="heading">Your loans</h2>
+        {positions.length === 0 && errors.length === 0 && <span className="text-t2">No open loans on the supported protocols</span>}
       </div>
       <div className="flex flex-col gap-2 mt-4">
         {positions.map((v) => (
@@ -96,7 +96,7 @@ function PositionBlock({ view, owner, onChanged }: { view: PositionView; owner: 
                 <tr key={"c" + l.token.address}>
                   <th scope="row">
                     <span className="name-cell">
-                      <Avatar text={l.token.symbol} />
+                      <Avatar text={l.token.symbol} token={l.token} />
                       <span className="lines">
                         <span>{l.token.symbol}</span>
                         <span className="sub">Collateral</span>
@@ -116,7 +116,7 @@ function PositionBlock({ view, owner, onChanged }: { view: PositionView; owner: 
               <tr key={"d" + l.token.address}>
                 <th scope="row">
                   <span className="name-cell">
-                    <Avatar text={l.token.symbol} />
+                    <Avatar text={l.token.symbol} token={l.token} />
                     <span className="lines">
                       <span>{l.token.symbol}</span>
                       <span className="sub">Debt</span>

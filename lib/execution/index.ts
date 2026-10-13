@@ -1,8 +1,10 @@
 import { AaveV3Arbitrum, AaveV3Avalanche, AaveV3Base, AaveV3Ethereum, AaveV3Optimism, AaveV3Polygon } from "@bgd-labs/aave-address-book";
-import { COMET_USDC, MOONWELL_COMPTROLLER, MORPHO_BLUE, SPARK_ETHEREUM } from "../protocols/addresses";
+import { COMET_USDC, EULER_EVC, FLUID_CHAINS, FLUID_VAULT_RESOLVER, MOONWELL_COMPTROLLER, MORPHO_BLUE, SPARK_ETHEREUM } from "../protocols/addresses";
 import { aaveExecutor } from "./aave";
 import type { Executor } from "./common";
 import { compoundExecutor } from "./compound";
+import { eulerExecutor } from "./euler";
+import { fluidExecutor } from "./fluid";
 import { moonwellExecutor } from "./moonwell";
 import { morphoExecutor } from "./morpho";
 
@@ -26,6 +28,11 @@ export function executorFor(protocolId: string, chainId: number): Executor | nul
   if (protocolId === "moonwell") {
     const comptroller = MOONWELL_COMPTROLLER[chainId as keyof typeof MOONWELL_COMPTROLLER];
     return comptroller ? moonwellExecutor(comptroller) : null;
+  }
+  if (protocolId === "fluid" && FLUID_CHAINS.includes(chainId as (typeof FLUID_CHAINS)[number])) return fluidExecutor(FLUID_VAULT_RESOLVER);
+  if (protocolId === "euler-v2") {
+    const evc = EULER_EVC[chainId as keyof typeof EULER_EVC];
+    return evc ? eulerExecutor(evc) : null;
   }
   if (protocolId === "spark" && chainId === 1) return aaveExecutor(SPARK_ETHEREUM.POOL, SPARK_ETHEREUM.PROTOCOL_DATA_PROVIDER, "Spark");
   return null;

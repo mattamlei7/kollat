@@ -11,7 +11,7 @@ const table: ChainTable = { chainId: 1, columns: [column], totals: {}, rows: [{
   best: column.key,
   cells: { [column.key]: { kind: "capacity", market: { id: "aave-v3:1:weth", collateralPriceUsd: 3000, ltv: 0.8, liquidationThreshold: 0.825, liquidationPenalty: 0.05 } as never, capacity: { collateralUsd: 12000, maxBorrowUsd: 9600 } as never, rate: { borrowApyVariable: 0.05 } as never } },
 }] };
-const sim = () => simulate([table], { chainId: 1, colKey: column.key, rowKey: "0xweth" }, 5000)!;
+const sim = () => simulate([table], { chainId: 1, colKey: column.key, rowKey: "0xweth" }, 5000, null, 4)!;
 
 describe("borrow review", () => {
   it("shows costs, accepted collateral and risk before the slide; never reports a loan was opened", () => {
@@ -35,13 +35,13 @@ describe("borrow review", () => {
   });
   it("less collateral: fewer units deposited, lower limit, closer liquidation", () => {
     const full = sim();
-    const half = simulate([table], { chainId: 1, colKey: column.key, rowKey: "0xweth" }, 5000, null, 0.5)!;
+    const half = simulate([table], { chainId: 1, colKey: column.key, rowKey: "0xweth" }, 5000, null, 2)!;
     expect(half.units).toBe(2);
     expect(half.max).toBe(4800);
     expect(half.withinCapacity).toBe(false);
     expect(half.liq).toBeGreaterThan(full.liq);
-    const quarterLoan = simulate([table], { chainId: 1, colKey: column.key, rowKey: "0xweth" }, 2000, null, 0.5)!;
-    expect(quarterLoan.hf).toBeLessThan(simulate([table], { chainId: 1, colKey: column.key, rowKey: "0xweth" }, 2000)!.hf);
+    const quarterLoan = simulate([table], { chainId: 1, colKey: column.key, rowKey: "0xweth" }, 2000, null, 2)!;
+    expect(quarterLoan.hf).toBeLessThan(simulate([table], { chainId: 1, colKey: column.key, rowKey: "0xweth" }, 2000, null, 4)!.hf);
     expect(renderToStaticMarkup(createElement(BorrowReview, { sim: quarterLoan, onBack: () => {} }))).toContain("2 WETH");
     expect(reviewTerms(quarterLoan)).not.toBe(reviewTerms({ ...quarterLoan, units: 3 }));
   });

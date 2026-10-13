@@ -2,7 +2,7 @@ import { erc20Abi, formatUnits, getAddress, type Address } from "viem";
 import { getClient } from "../chains";
 import { healthFactor, liquidationPrice, uniformDrawdown, type CollateralLeg } from "../math/health";
 import { EULER_ROUTER_ABI, EVAULT_ABI, EVC_ABI } from "./abis/euler";
-import { USDC } from "./addresses";
+import { USDC, subAccount } from "./addresses";
 import { BaseLendingProtocol } from "./base";
 import type { ChainId, Market, MarketStatus, Position, PositionLeg, ProtocolId, Rate, Token } from "./types";
 
@@ -24,10 +24,7 @@ export function decodeCap(cap: number): bigint | null {
   return (BigInt(cap >> 6) * 10n ** BigInt(cap & 63)) / 100n;
 }
 
-/** EVC sub-account i of an owner: the address with its low byte XOR-ed. */
-export function subAccount(owner: Address, i: number): Address {
-  return getAddress(("0x" + (BigInt(owner) ^ BigInt(i)).toString(16).padStart(40, "0")) as Address);
-}
+export { subAccount };
 
 interface DebtVault {
   vault: Address;

@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import { getAddress, type Address } from "viem";
 import type { ChainId } from "./types";
 
 /**
@@ -69,6 +69,11 @@ export const EULER_EVC: Partial<Record<ChainId, Address>> = {
   42161: "0x6302ef0F34100CDDFb5489fbcB6eE1AA95CD1066",
   43114: "0xddcbe30A761Edd2e19bba930A977475265F36Fa1",
 };
+
+/** EVC sub-account i of an owner: the address with its low byte XOR-ed. */
+export function subAccount(owner: Address, i: number): Address {
+  return getAddress(("0x" + (BigInt(owner) ^ BigInt(i)).toString(16).padStart(40, "0")) as Address);
+}
 
 /** Moonwell Comptrollers (docs.moonwell.fi; getAllMarkets verified on-chain 2026-09-16). Base core markets currently have borrow caps of 1 wei. */
 export const MOONWELL_COMPTROLLER: Partial<Record<ChainId, Address>> = {
