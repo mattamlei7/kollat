@@ -5,9 +5,9 @@ import type { Address, Hash } from "viem";
 import { CHAIN_LABEL } from "@/lib/client-types";
 import { depositPlan, readFundingFor } from "@/lib/earn/execute";
 import { reviewChange, reviewedTerms, yearlyEarnings, type Reviewed } from "@/lib/earn/rank";
-import { PRODUCT_LABEL, type Opportunity } from "@/lib/earn/types";
+import { PRODUCT_LABEL, isCurated, type Opportunity } from "@/lib/earn/types";
 import type { PlanStep } from "@/lib/execution";
-import { Section, SummaryLine } from "../Rail";
+import { KeyFigures, Section, SummaryLine } from "../Rail";
 import { CAP_USD, FORK_RPC, MAINNET } from "../WalletSteps";
 import { EARNINGS_NOTE, rewardsText, withdrawalText } from "./EarnTable";
 import { fmtApy, fmtToken } from "./format";
@@ -131,15 +131,21 @@ export function LendRail(p: Props) {
   }
 
   return <div className="rail-view flex flex-col gap-4">
-    <h2 className="heading">{o.protocol} · {o.name}</h2>
-    <dl>
-      <SummaryLine label="You deposit">{fmtToken(amount, o.asset)}</SummaryLine>
-      <SummaryLine label="Destination">{PRODUCT_LABEL[o.product]}</SummaryLine>
+    <div className="flex flex-col gap-1">
+      <span className="rail-eyebrow">{PRODUCT_LABEL[o.product]}{o.operator && isCurated(o) ? ` · ${o.operator}` : ""}</span>
+      <h2 className="heading">{o.name}</h2>
+    </div>
+    <KeyFigures
+      primary={{ label: "You deposit", value: fmtToken(amount, o.asset) }}
+      rest={[
+        { label: "Current APY", value: fmtApy(o.baseApy), sub: o.rateKind === "governance-set" ? "Governance-set" : "Variable" },
+        { label: "Est. earnings / year", value: earn === null ? "Unavailable" : `≈ ${earn.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${o.asset.symbol}` },
+      ]}
+    />
+    <dl className="rail-secondary">
       <SummaryLine label="Network">{CHAIN_LABEL[o.chainId]}</SummaryLine>
-      <SummaryLine label="Net base APY">{fmtApy(o.baseApy)} <span className="text-t2 font-normal">{o.rateKind === "governance-set" ? "governance-set" : "variable"}</span></SummaryLine>
-      <SummaryLine label="Est. earnings / year">{earn === null ? "Unavailable" : `≈ ${earn.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${o.asset.symbol}`}</SummaryLine>
+      <SummaryLine label="Withdrawal"><span className={w.state === "Available now" ? "" : "hue-caution"}>{w.state}</span></SummaryLine>
       <SummaryLine label="Rewards">{rewardsText(o)}</SummaryLine>
-      <SummaryLine label="Withdrawal"><span className={w.state === "Available now" ? "" : "hue-caution"}>{w.state}</span><br /><span className="text-t2 font-normal text-sm">{w.detail}</span></SummaryLine>
       <SummaryLine label="Network fees">Shown in your wallet</SummaryLine>
     </dl>
     <p className="text-sm text-t2 -mt-2">{EARNINGS_NOTE}</p>
@@ -188,11 +194,16 @@ function KnowBeforeYouDeposit({ o }: { o: Opportunity }) {
     ...(o.product === "aave-supply" || o.product === "sparklend-supply" ? ["This deposit may also be used as collateral in the pool. If you borrow against it, withdrawals must preserve your loan's collateral requirements and the deposit can be liquidated."] : []),
     o.rateKind === "governance-set" ? "The rate is set by Sky governance and can be changed by vote at any time." : "The rate is variable. It moves with how much is borrowed and can fall after you deposit.",
     o.product === "morpho-vault" ? `Losses in the lending markets this vault uses, or a smart-contract failure in Morpho or the vault, can reduce what you get back.`
+      : o.product === "euler-vault" ? "Bad debt in this vault's loans, or a smart-contract or oracle failure in Euler or the vault, can reduce what you get back."
+      : o.product === "fluid-lending" ? "Bad debt anywhere in Fluid's shared liquidity layer, or a smart-contract failure in Fluid, can reduce what you get back."
       : o.product === "spark-savings" ? "A smart-contract failure in Spark, Sky or the PSM can reduce what you get back."
-      : `Bad debt in the ${o.protocol === "Spark" ? "SparkLend" : "Aave"} pool or a smart-contract failure can reduce what you get back.`,
+      : `Bad debt in the ${o.product === "sparklend-supply" ? "SparkLend pool" : o.product === "compound-supply" ? "Compound market" : "Aave pool"} or a smart-contract failure can reduce what you get back.`,
     o.product === "spark-savings" ? "You hold USDS while deposited. If USDS or USDC loses its peg, you can get back less than you put in." : "USDC is a stablecoin; if it loses its peg, so does your deposit.",
     `Withdrawals depend on available liquidity: ${o.withdrawal.toLowerCase()} No queue applies; if liquidity is short you wait until borrowers repay or new deposits arrive.`,
     ...(o.product === "morpho-vault" ? [`${o.operator ?? "The curator"} can change which markets the vault lends to, within the vault’s configured limits and timelocks.`] : []),
+    ...(o.product === "euler-vault" ? [`${o.operator ?? "The vault’s governor"} can change the collateral this vault accepts, its loan-to-value limits and its price oracles.`] : []),
+    ...(o.product === "fluid-lending" ? ["Fluid limits how much can leave at once. After large withdrawals the limit expands over a few hours, so a full exit may take more than one withdrawal."] : []),
+    ...(o.product === "compound-supply" ? ["Supplied USDC is not used as collateral in Compound, and a deposit cannot be made while this wallet has a Compound USDC loan in the same market."] : []),
     "Nothing here is insured or guaranteed.",
   ];
   return <ul className="flex flex-col gap-2 text-sm text-t2 list-disc pl-5">{items.map((t) => <li key={t}>{t}</li>)}</ul>;

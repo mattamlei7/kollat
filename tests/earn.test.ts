@@ -1,6 +1,7 @@
 import { decodeFunctionData, getAddress, maxUint256 } from "viem";
 import { describe, expect, it } from "vitest";
 import { AAVE_POOL_WRITE_ABI } from "../lib/execution/aave";
+import { COMET_WRITE_ABI } from "../lib/execution/compound";
 import { VAULT_WRITE_ABI, constrainedWithdrawalLimit, depositPlan, withdrawPlan } from "../lib/earn/execute";
 import { parseAmountInput, rankOpportunities, reviewChange, reviewedTerms, withdrawalState, yearlyEarnings } from "../lib/earn/rank";
 import type { Opportunity } from "../lib/earn/types";
@@ -88,6 +89,17 @@ describe("earn plans", () => {
     expect(decodeFunctionData({ abi: AAVE_POOL_WRITE_ABI, data: supply.data }).functionName).toBe("supply");
     const [w] = withdrawPlan({ dest: pool, user, holding: { assets: u(10), withdrawable: u(10), shares: 0n } });
     expect(decodeFunctionData({ abi: AAVE_POOL_WRITE_ABI, data: w.data }).args).toEqual([usdc.address, maxUint256, user]);
+  });
+  it("Compound supplies USDC to the Comet; a full exit uses max, a partial one never exceeds the supply balance", () => {
+    const comet = opp("c", { product: "compound-supply", protocol: "Compound" });
+    const [approve, supply] = depositPlan({ dest: comet, user, amount: u(10), balance: u(10), allowance: 0n, capacity: null });
+    expect(approve.label).toBe("Approve USDC");
+    expect(decodeFunctionData({ abi: COMET_WRITE_ABI, data: supply.data })).toMatchObject({ functionName: "supply", args: [usdc.address, u(10)] });
+    const holding = { assets: u(10), withdrawable: u(10), shares: 0n };
+    expect(decodeFunctionData({ abi: COMET_WRITE_ABI, data: withdrawPlan({ dest: comet, user, holding })[0].data }).args).toEqual([usdc.address, maxUint256]);
+    expect(decodeFunctionData({ abi: COMET_WRITE_ABI, data: withdrawPlan({ dest: comet, user, amount: u(4), holding })[0].data }).args).toEqual([usdc.address, u(4)]);
+    // Withdrawing more than the supply balance would open a Compound loan.
+    expect(() => withdrawPlan({ dest: comet, user, amount: u(11), holding })).toThrow(/more than this position holds/);
   });
   it("a vault exit redeems every share; a partial withdrawal is by assets; illiquid amounts are refused", () => {
     const vault = opp("v");

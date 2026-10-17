@@ -1,17 +1,23 @@
 import type { Address } from "viem";
 
 /**
- * One place a user can deposit an asset to earn: an Aave or SparkLend supply market, a Morpho vault, or a
- * Spark Savings vault. JSON-safe: token amounts are base-unit integer strings. Unknown is null, never zero.
+ * One place a user can deposit an asset to earn: an Aave, SparkLend or Compound supply market, a Morpho or Euler
+ * vault, a Fluid lending token, or a Spark Savings vault. JSON-safe: token amounts are base-unit integer strings. Unknown is null, never zero.
  */
-export type EarnProduct = "aave-supply" | "sparklend-supply" | "morpho-vault" | "spark-savings";
+export type EarnProduct = "aave-supply" | "sparklend-supply" | "compound-supply" | "morpho-vault" | "euler-vault" | "fluid-lending" | "spark-savings";
 
 export const PRODUCT_LABEL: Record<EarnProduct, string> = {
   "aave-supply": "Aave supply",
   "sparklend-supply": "SparkLend supply",
+  "compound-supply": "Compound supply",
   "morpho-vault": "Morpho vault",
+  "euler-vault": "Euler vault",
+  "fluid-lending": "Fluid lending",
   "spark-savings": "Spark Savings",
 };
+
+/** Products where a named curator, not protocol governance, decides what the deposit is lent against. */
+export const isCurated = (o: Pick<Opportunity, "product">) => o.product === "morpho-vault" || o.product === "euler-vault";
 
 export interface EarnToken { address: Address; symbol: string; decimals: number }
 
@@ -19,7 +25,7 @@ export interface Opportunity {
   /** Stable: product, chain and the contract that holds the deposit. */
   id: string;
   product: EarnProduct;
-  protocol: "Aave" | "Morpho" | "Spark";
+  protocol: "Aave" | "Compound" | "Euler" | "Fluid" | "Morpho" | "Spark";
   chainId: number;
   /** Market or vault name, e.g. "USDC market" or "Gauntlet USDC Prime". */
   name: string;

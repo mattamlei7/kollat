@@ -159,30 +159,26 @@ function Summary({ sim, hint, onSelect, onView, reviewUnavailable }: RailProps) 
 
   return (
     <div className="rail-view flex flex-col gap-5">
-      <h2 className="heading">{sim.col.name} · {sym} / USDC</h2>
+      <h2 className="rail-eyebrow">{sim.col.name} · {sym} / USDC</h2>
 
-      <dl className="loan-summary">
-        <SummaryLine label="You receive">{fmtUsdc(sim.amount)} USDC</SummaryLine>
+      <KeyFigures
+        primary={{ label: "You receive", value: `${fmtUsdc(sim.amount)} USDC` }}
+        rest={[
+          { label: "Borrowing rate", value: sim.apy === null ? "Unavailable" : <>{pct(sim.apy)} <Def term="apy" right>APY</Def></>, sub: "Variable" },
+          {
+            label: <Def term="liq">Liquidation exposure</Def>,
+            value: check.status !== "fundable" ? "Resolve eligibility first" : sim.liq > 0 ? <span className={hueClass(sim.band)}>≈ {usd(sim.liq, { cents: true })}</span> : "Covered",
+            sub: check.status !== "fundable" ? undefined : sim.existingDebt > 0 ? `per ${sym}, includes existing debt` : sim.liq > 0 ? `per ${sym} · ${drop} below today` : "Existing collateral covers this debt",
+          },
+        ]}
+      />
+
+      <dl className="rail-secondary">
         <SummaryLine label="You pledge">
           {fmtAmount(sim.units)} {sym} <span className="text-t2 font-normal">· ≈ {usd(sim.units * price)}</span>
         </SummaryLine>
-        <SummaryLine label="Variable borrowing rate">{sim.apy === null ? "Unavailable" : <>{pct(sim.apy)} <Def term="apy" right>APY</Def></>}</SummaryLine>
-        <SummaryLine label="Estimated interest">
-          {sim.costPerYear === null ? "Unavailable" : (
-            <span className="flex flex-col items-end">
-              <span>≈ {usd(sim.costPerYear / 12, { cents: true })} / month</span>
-              <span className="text-t2 font-normal">≈ {usd(sim.costPerYear)} / year</span>
-            </span>
-          )}
-        </SummaryLine>
-        <SummaryLine label={<Def term="liq">Liquidation exposure</Def>}>
-          {check.status !== "fundable"
-            ? "Resolve eligibility first"
-            : sim.existingDebt > 0
-            ? <span className="flex flex-col items-end"><span className={hueClass(sim.band)}>≈ {usd(sim.liq, { cents: true })}</span><span className="text-t2 font-normal">Includes existing debt</span></span>
-            : sim.liq > 0
-              ? <span className="flex flex-col items-end"><span className={hueClass(sim.band)}>≈ {usd(sim.liq, { cents: true })}</span><span className="text-t2 font-normal whitespace-nowrap">{drop} below today</span></span>
-              : "Existing collateral covers this debt"}
+        <SummaryLine label="Est. interest">
+          {sim.costPerYear === null ? "Unavailable" : <span className="whitespace-nowrap">≈ {usd(sim.costPerYear / 12, { cents: true })} / mo <span className="text-t2 font-normal">· {usd(sim.costPerYear)} / yr</span></span>}
         </SummaryLine>
       </dl>
       <p className="text-sm text-t2 -mt-3">Interest is an estimate at today’s variable rate, not a required monthly payment.</p>
@@ -234,6 +230,25 @@ function Summary({ sim, hint, onSelect, onView, reviewUnavailable }: RailProps) 
         </Section>
       </div>
     </div>
+  );
+}
+
+/** The two or three numbers a decision turns on, larger than everything else in the rail. */
+export function KeyFigures({ primary, rest }: { primary: { label: React.ReactNode; value: React.ReactNode }; rest: { label: React.ReactNode; value: React.ReactNode; sub?: React.ReactNode }[] }) {
+  return (
+    <dl className="key-figures">
+      <div className="key-figure key-primary">
+        <dt>{primary.label}</dt>
+        <dd className="num">{primary.value}</dd>
+      </div>
+      {rest.map((f, i) => (
+        <div key={i} className="key-figure">
+          <dt>{f.label}</dt>
+          <dd className="num">{f.value}</dd>
+          {f.sub && <dd className="key-sub">{f.sub}</dd>}
+        </div>
+      ))}
+    </dl>
   );
 }
 

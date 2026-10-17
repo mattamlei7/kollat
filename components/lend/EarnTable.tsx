@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CHAIN_LABEL } from "@/lib/client-types";
 import { capacityLeft, withdrawalState, yearlyEarnings, type Row } from "@/lib/earn/rank";
-import { PRODUCT_LABEL, type Opportunity } from "@/lib/earn/types";
+import { PRODUCT_LABEL, isCurated, type Opportunity } from "@/lib/earn/types";
 import { Badge } from "../ui";
 import { fmtAgo, fmtApy, fmtToken } from "./format";
 
@@ -65,7 +65,7 @@ function EarnRow({ row, amount, selected, expanded, onSelect, onToggle }: { row:
         <input type="radio" name="earn" className="sr-only" checked={selected} disabled={!row.eligible} onChange={onSelect} />
         <span className="earn-dest">
           <span className="body-strong">{PRODUCT_LABEL[o.product]}</span>
-          <span className="text-sm text-t2">{o.name}{o.operator && o.product === "morpho-vault" ? ` · curated by ${o.operator}` : ""}</span>
+          <span className="text-sm text-t2">{o.name}{o.operator && isCurated(o) ? ` · curated by ${o.operator}` : ""}</span>
         </span>
         <span className="num num-col">
           <span className="earn-cell-label" aria-hidden="true">Net base APY</span>

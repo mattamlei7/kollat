@@ -130,7 +130,10 @@ export function App({ initialInput, initialChain }: { initialInput: string | nul
 
       <div className="main">
         <header className="topbar">
-          <h1 className="display-sm">Borrow</h1>
+          <div className="flex flex-col">
+            <h1 className="display-sm">Borrow against your crypto</h1>
+            <p className="text-t2">Compare USDC loans across Aave, Compound, Euler, Fluid, Moonwell, Morpho and Spark.</p>
+          </div>
           <WalletControl
             networks={BORROW_NETWORKS}
             network={chain === "all" ? "all" : Number(chain)}

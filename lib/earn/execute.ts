@@ -1,12 +1,14 @@
 import { BaseError, ContractFunctionRevertedError, encodeFunctionData, erc20Abi, formatUnits, maxUint256, parseAbi, type Address, type PublicClient } from "viem";
 import { approveStep, type PlanStep } from "../execution/common";
 import { AAVE_POOL_WRITE_ABI } from "../execution/aave";
+import { COMET_WRITE_ABI } from "../execution/compound";
 import type { Opportunity } from "./types";
 
 /**
- * Unsigned deposit and withdrawal plans for earn destinations. Two mechanics cover every listed product:
+ * Unsigned deposit and withdrawal plans for earn destinations. Three mechanics cover every listed product:
  * - Pools (Aave, SparkLend): approve → supply(asset, amount, you); withdraw(asset, amount | max, you).
- * - ERC-4626 vaults (Morpho, Spark Savings): approve → deposit(amount, you); withdraw(assets) or redeem(all shares).
+ * - Compound v3: approve → supply(USDC, amount); withdraw(USDC, amount | max). The caller is the account.
+ * - ERC-4626 vaults (Morpho, Euler, Fluid, Spark Savings): approve → deposit(amount, you); withdraw(assets) or redeem(all shares).
  * Approvals are for the exact amount. Assets always go to, and come back to, the depositor's own wallet.
  */
 
@@ -23,6 +25,13 @@ export const VAULT_WRITE_ABI = parseAbi([
 
 type Dest = Pick<Opportunity, "product" | "target" | "asset" | "receipt" | "name">;
 const isPool = (d: Dest) => d.product === "aave-supply" || d.product === "sparklend-supply";
+const isComet = (d: Dest) => d.product === "compound-supply";
+
+const COMET_ACCOUNT_ABI = parseAbi([
+  "function balanceOf(address) view returns (uint256)",
+  "function borrowBalanceOf(address) view returns (uint256)",
+  "function isWithdrawPaused() view returns (bool)",
+]);
 
 export interface DepositInput { dest: Dest; user: Address; amount: bigint; balance: bigint; allowance: bigint; capacity: bigint | null }
 
@@ -36,6 +45,7 @@ export function depositPlan(p: DepositInput): PlanStep[] {
     label: "Deposit", to: p.dest.target, value: 0n,
     data: isPool(p.dest)
       ? encodeFunctionData({ abi: AAVE_POOL_WRITE_ABI, functionName: "supply", args: [p.dest.asset.address, p.amount, p.user, 0] })
+      : isComet(p.dest) ? encodeFunctionData({ abi: COMET_WRITE_ABI, functionName: "supply", args: [p.dest.asset.address, p.amount] })
       : encodeFunctionData({ abi: VAULT_WRITE_ABI, functionName: "deposit", args: [p.amount, p.user] }),
   });
   return steps;
@@ -85,6 +95,11 @@ export function withdrawPlan(p: WithdrawInput): PlanStep[] {
     return [{ label: all ? "Withdraw everything" : "Withdraw", to: p.dest.target, value: 0n,
       data: encodeFunctionData({ abi: AAVE_POOL_WRITE_ABI, functionName: "withdraw", args: [p.dest.asset.address, all ? maxUint256 : p.amount!, p.user] }) }];
   }
+  if (isComet(p.dest)) {
+    // max withdraws the whole supply balance at inclusion. An exact amount above the balance would borrow, so it is checked above.
+    return [{ label: all ? "Withdraw everything" : "Withdraw", to: p.dest.target, value: 0n,
+      data: encodeFunctionData({ abi: COMET_WRITE_ABI, functionName: "withdraw", args: [p.dest.asset.address, all ? maxUint256 : p.amount!] }) }];
+  }
   return [{ label: all ? "Withdraw everything" : "Withdraw", to: p.dest.target, value: 0n,
     data: all
       ? encodeFunctionData({ abi: VAULT_WRITE_ABI, functionName: "redeem", args: [shares, p.user, p.user] })
@@ -114,6 +129,16 @@ export async function readHolding(c: PublicClient, dest: Dest, user: Address): P
     });
     return { assets, withdrawable, shares: 0n, ...(withdrawable < liquid ? { withdrawalNote: "This deposit backs an existing loan. The amount shown is a conservative withdrawal estimate checked against the pool's collateral requirements." } : {}) };
   }
+  if (isComet(dest)) {
+    const comet = { address: dest.target, abi: COMET_ACCOUNT_ABI } as const;
+    const [assets, cash, paused] = await Promise.all([
+      c.readContract({ ...comet, functionName: "balanceOf", args: [user] }),
+      c.readContract({ address: dest.asset.address, abi: erc20Abi, functionName: "balanceOf", args: [dest.target] }),
+      c.readContract({ ...comet, functionName: "isWithdrawPaused" }),
+    ]);
+    if (paused) return { assets, withdrawable: 0n, shares: 0n, withdrawalNote: "Withdrawals are paused by this market." };
+    return { assets, withdrawable: assets < cash ? assets : cash, shares: 0n };
+  }
   const v = { address: dest.target, abi: VAULT_WRITE_ABI } as const;
   const [shares, withdrawable] = await Promise.all([
     c.readContract({ ...v, functionName: "balanceOf", args: [user] }),
@@ -129,6 +154,10 @@ export async function readFundingFor(c: PublicClient, dest: Dest, user: Address)
     c.readContract({ address: dest.asset.address, abi: erc20Abi, functionName: "balanceOf", args: [user] }),
     c.readContract({ address: dest.asset.address, abi: erc20Abi, functionName: "allowance", args: [user, dest.target] }),
   ]);
-  const capacity = isPool(dest) ? null : await c.readContract({ address: dest.target, abi: VAULT_WRITE_ABI, functionName: "maxDeposit", args: [user] });
+  if (isComet(dest) && await c.readContract({ address: dest.target, abi: COMET_ACCOUNT_ABI, functionName: "borrowBalanceOf", args: [user] }) > 0n) {
+    // Supplying the base asset repays debt first, so this would not be a deposit.
+    throw new Error("This wallet has a Compound loan in this market, so a USDC deposit would repay it instead of earning. Repay it from Borrow first.");
+  }
+  const capacity = isPool(dest) || isComet(dest) ? null : await c.readContract({ address: dest.target, abi: VAULT_WRITE_ABI, functionName: "maxDeposit", args: [user] });
   return { balance, allowance, capacity };
 }

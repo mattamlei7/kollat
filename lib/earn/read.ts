@@ -30,6 +30,28 @@ const VAULT_ABI = parseAbi([
   "function psm() view returns (address)",
   "function susds() view returns (address)",
 ]);
+const COMET_ABI = parseAbi([
+  "function baseToken() view returns (address)",
+  "function isSupplyPaused() view returns (bool)",
+  "function isWithdrawPaused() view returns (bool)",
+  "function getUtilization() view returns (uint256)",
+  "function getSupplyRate(uint256 utilization) view returns (uint64)",
+]);
+const EVAULT_ABI = parseAbi([
+  "function asset() view returns (address)",
+  "function cash() view returns (uint256)",
+  "function totalBorrows() view returns (uint256)",
+  "function interestRate() view returns (uint256)",
+  "function interestFee() view returns (uint16)",
+  "function maxDeposit(address) view returns (uint256)",
+]);
+/** Fluid LendingResolver, same address on every chain (deployments.md). The deployed version returns this struct. */
+const FLUID_LENDING_RESOLVER = "0x48D32f49aFeAEC7AE66ad7B9264f446fc11a1569";
+const FLUID_RESOLVER_ABI = parseAbi([
+  "struct SupplyData { bool modeWithInterest; uint256 supply; uint256 withdrawalLimit; uint256 lastUpdateTimestamp; uint256 expandPercent; uint256 expandDuration; uint256 baseWithdrawalLimit; uint256 withdrawableUntilLimit; uint256 withdrawable; }",
+  "struct FTokenDetails { address tokenAddress; bool eip2612Deposits; bool isNativeUnderlying; string name; string symbol; uint256 decimals; address asset; uint256 totalAssets; uint256 totalSupply; uint256 convertToShares; uint256 convertToAssets; uint256 rewardsRate; uint256 supplyRate; int256 rebalanceDifference; SupplyData liquidityUserSupplyData; }",
+  "function getFTokenDetails(address fToken) view returns (FTokenDetails)",
+]);
 const SAVINGS_ABI = parseAbi([
   "function ssr() view returns (uint256)",
   "function pocket() view returns (address)",
@@ -43,6 +65,7 @@ const SAVINGS_ABI = parseAbi([
 const aprToApy = (apr: number) => Math.pow(1 + apr / SECONDS_PER_YEAR, SECONDS_PER_YEAR) - 1;
 /** A per-second ray growth factor (Sky Savings Rate) as an APY. */
 const perSecondToApy = (ssr: bigint) => Math.pow(Number(ssr) / 1e27, SECONDS_PER_YEAR) - 1;
+const sameAddress = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 const usdcOf = (chainId: EarnChain): EarnToken => ({ address: USDC[chainId], symbol: "USDC", decimals: 6 });
 const message = (e: unknown) => ((e as { shortMessage?: string }).shortMessage ?? (e as Error).message ?? String(e)).slice(0, 200);
 
@@ -69,6 +92,27 @@ function blank(d: Destination): Opportunity {
         exposure: "While deposited you hold USDS (Sky's stablecoin), not USDC. Getting USDC back depends on the PSM holding enough USDC and on USDS holding its peg.",
         conversion: "USDC → USDS → sUSDS on deposit, and back to USDC on withdrawal, through Spark's PSM.",
         docsUrl: "https://docs.spark.fi", explorerUrl: explorer(d.vault) };
+    case "compound-supply":
+      return { ...base, product: d.product, protocol: "Compound", name: "Compound v3 USDC market", operator: "Compound governance",
+        receipt: { address: d.comet, symbol: "cUSDCv3", decimals: 6, kind: "interest-bearing token" }, target: d.comet, rateKind: "variable",
+        withdrawal: "Withdraw any time, up to the USDC not currently lent out by the market.",
+        usedFor: "Lent to Compound borrowers, who post other crypto as collateral in this market.",
+        exposure: "Your USDC is pooled and lent to borrowers. If a borrower's collateral falls faster than liquidations can cover, the market can take a loss.",
+        conversion: null, docsUrl: "https://docs.compound.finance", explorerUrl: explorer(d.comet) };
+    case "euler-vault":
+      return { ...base, product: d.product, protocol: "Euler", name: d.name, operator: d.curator,
+        receipt: { address: d.vault, symbol: "eUSDC", decimals: 6, kind: "vault shares" }, target: d.vault, rateKind: "variable",
+        withdrawal: "Withdraw any time, up to the USDC not currently borrowed from the vault.",
+        usedFor: `Lent by this Euler vault to borrowers who post collateral that ${d.curator} has approved.`,
+        exposure: `${d.curator} chooses which collateral this vault accepts, at what loan-to-value and with which price oracles, and can change them. A loss on the vault's loans reduces what depositors get back.`,
+        conversion: null, docsUrl: "https://docs.euler.finance", explorerUrl: explorer(d.vault) };
+    case "fluid-lending":
+      return { ...base, product: d.product, protocol: "Fluid", name: "Fluid USDC (fUSDC)", operator: "Fluid governance",
+        receipt: { address: d.vault, symbol: "fUSDC", decimals: 6, kind: "vault shares" }, target: d.vault, rateKind: "variable",
+        withdrawal: "Withdraw any time, up to Fluid's withdrawal limit, which expands gradually after large withdrawals.",
+        usedFor: "Supplied to Fluid's shared liquidity layer, which lends to Fluid vault borrowers and DEX pools.",
+        exposure: "Your USDC is pooled with every other Fluid supplier. Bad debt in any Fluid vault or DEX that draws on that pool can reduce what you get back.",
+        conversion: null, docsUrl: "https://docs.fluid.instadapp.io", explorerUrl: explorer(d.vault) };
     case "morpho-vault":
       return { ...base, product: d.product, protocol: "Morpho", name: d.name, operator: d.curator,
         receipt: { address: d.vault, symbol: "shares", decimals: 18, kind: "vault shares" }, target: d.vault, rateKind: "variable",
@@ -143,6 +187,77 @@ async function readSavings(d: Extract<Destination, { product: "spark-savings" }>
   return { ...o, baseApy: perSecondToApy(ssr), rewards: [], fees, capacity: capOf(maxDeposit), liquidity: liquidity.toString(), status: maxDeposit === 0n ? "paused" : "active", fetchedAt: Date.now() };
 }
 
+async function readComet(d: Extract<Destination, { product: "compound-supply" }>, o: Opportunity): Promise<Opportunity> {
+  const c = getClient(d.chainId);
+  const comet = { address: d.comet, abi: COMET_ABI } as const;
+  const [baseToken, supplyPaused, withdrawPaused, utilization] = await c.multicall({ contracts: [
+    { ...comet, functionName: "baseToken" }, { ...comet, functionName: "isSupplyPaused" }, { ...comet, functionName: "isWithdrawPaused" }, { ...comet, functionName: "getUtilization" },
+  ], allowFailure: false });
+  if (!sameAddress(baseToken, o.asset.address)) throw new Error("Comet base asset is not native USDC");
+  const [rate, cash] = await Promise.all([
+    c.readContract({ ...comet, functionName: "getSupplyRate", args: [utilization] }),
+    c.readContract({ address: o.asset.address, abi: erc20Abi, functionName: "balanceOf", args: [d.comet] }),
+  ]);
+  return {
+    ...o,
+    // Per-second rate, 1e18-scaled; supply balances compound through the market's index.
+    baseApy: aprToApy((Number(rate) / 1e18) * SECONDS_PER_YEAR),
+    // COMP supply rewards (baseTrackingSupplySpeed) and third-party campaigns are not read.
+    rewards: null,
+    fees: [{ label: "Reserves", value: "Compound keeps part of borrower interest as reserves. The rate shown is already after it." }],
+    // Comet caps collateral, not base supply.
+    capacity: "unlimited",
+    liquidity: withdrawPaused ? "0" : cash.toString(),
+    status: supplyPaused ? "paused" : "active",
+    fetchedAt: Date.now(),
+  };
+}
+
+async function readEuler(d: Extract<Destination, { product: "euler-vault" }>, o: Opportunity): Promise<Opportunity> {
+  const v = { address: d.vault, abi: EVAULT_ABI } as const;
+  const [asset, cash, borrows, rate, fee, maxDeposit] = await getClient(d.chainId).multicall({ contracts: [
+    { ...v, functionName: "asset" }, { ...v, functionName: "cash" }, { ...v, functionName: "totalBorrows" },
+    { ...v, functionName: "interestRate" }, { ...v, functionName: "interestFee" }, { ...v, functionName: "maxDeposit", args: [PROBE] },
+  ], allowFailure: false });
+  if (!sameAddress(asset, o.asset.address)) throw new Error("Vault asset is not native USDC");
+  const total = cash + borrows;
+  // Suppliers earn the borrow rate on the borrowed share, less the interest fee (as EVK's UtilsLens computes it).
+  const borrowApr = (Number(rate) / 1e27) * SECONDS_PER_YEAR;
+  const supplyApr = total === 0n ? 0 : borrowApr * (Number(borrows) / Number(total)) * (1 - fee / 1e4);
+  return {
+    ...o,
+    baseApy: aprToApy(supplyApr),
+    rewards: null,
+    fees: [{ label: "Interest fee", value: `${fee / 100}% of borrower interest goes to the vault's governor and Euler. The rate shown is already after it.` }],
+    capacity: capOf(maxDeposit),
+    liquidity: cash.toString(),
+    status: maxDeposit === 0n ? "paused" : "active",
+    fetchedAt: Date.now(),
+  };
+}
+
+async function readFluid(d: Extract<Destination, { product: "fluid-lending" }>, o: Opportunity): Promise<Opportunity> {
+  const c = getClient(d.chainId);
+  const [f, maxDeposit] = await Promise.all([
+    c.readContract({ address: FLUID_LENDING_RESOLVER, abi: FLUID_RESOLVER_ABI, functionName: "getFTokenDetails", args: [d.vault] }),
+    c.readContract({ address: d.vault, abi: VAULT_ABI, functionName: "maxDeposit", args: [PROBE] }),
+  ]);
+  if (!sameAddress(f.asset, o.asset.address) || f.isNativeUnderlying) throw new Error("fToken asset is not native USDC");
+  return {
+    ...o,
+    // Liquidity-layer supply APR, 1e4 = 100%, already net of Fluid's revenue share.
+    baseApy: aprToApy(Number(f.supplyRate) / 1e4),
+    // fToken rewards (1e12 = 100%) accrue in USDC through the exchange price. Merkl campaigns are not read.
+    rewards: f.rewardsRate > 0n ? [{ token: "USDC", apr: Number(f.rewardsRate) / 1e12 }] : null,
+    fees: [{ label: "Protocol fee", value: "Fluid keeps a share of borrower interest. The rate shown is already after it." }],
+    capacity: capOf(maxDeposit),
+    // What the withdrawal limit lets suppliers take out right now, not the whole pool's cash.
+    liquidity: f.liquidityUserSupplyData.withdrawable.toString(),
+    status: maxDeposit === 0n ? "paused" : "active",
+    fetchedAt: Date.now(),
+  };
+}
+
 interface MorphoVault {
   address: string;
   symbol: string;
@@ -207,9 +322,15 @@ export async function readEarn(chains: readonly number[]): Promise<EarnSnapshot>
         if (api instanceof Error) return { ...o, error: `Rates unavailable: ${message(api)}` };
         return fromMorpho(o, api.get(`${d.chainId}:${getAddress(d.vault).toLowerCase()}`), maxDeposits[morphos.indexOf(d)]);
       }
-      return d.product === "spark-savings" ? await readSavings(d, o) : await readPool(d, o);
+      switch (d.product) {
+        case "spark-savings": return await readSavings(d, o);
+        case "compound-supply": return await readComet(d, o);
+        case "euler-vault": return await readEuler(d, o);
+        case "fluid-lending": return await readFluid(d, o);
+        default: return await readPool(d, o);
+      }
     } catch (e) {
-      return { ...o, error: fail(o.protocol === "Aave" ? "Aave" : o.product === "spark-savings" ? "Spark Savings" : "SparkLend", d.chainId, e) };
+      return { ...o, error: fail(o.product === "spark-savings" ? "Spark Savings" : o.product === "sparklend-supply" ? "SparkLend" : o.protocol, d.chainId, e) };
     }
   }));
   return { opportunities, failures, fetchedAt: Date.now() };

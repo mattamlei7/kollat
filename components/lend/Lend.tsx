@@ -141,7 +141,7 @@ function LendSession({ wallet }: { wallet: ReturnType<typeof useWallet> }) {
         <header className="topbar">
           <div className="flex flex-col">
             <h1 className="display-sm">Earn on your crypto</h1>
-            <p className="text-t2">Compare earning options across Aave, Morpho and Spark.</p>
+            <p className="text-t2">Compare earning options across Aave, Compound, Euler, Fluid, Morpho and Spark.</p>
           </div>
           <WalletControl networks={[...EARN_CHAINS]} network={chainId} onNetwork={(n) => n !== "all" && pickChain(n)} wallet={wallet} />
         </header>

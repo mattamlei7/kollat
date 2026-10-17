@@ -777,3 +777,15 @@ select.ctl {
 .wallet-lookup .ctl { height: 40px; min-width: 0; }
 .wallet-pop:has(.wallet-lookup) { width: 300px; }
 .viewing-note { flex: 1 0 100%; }
+
+/* ---- Rail hierarchy: the deciding numbers first and larger; context secondary ---- */
+.rail-eyebrow { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--fg-muted); }
+.key-figures { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; margin: 0; }
+.key-figure { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.key-figure dt { font-size: 13px; color: var(--fg-muted); }
+.key-figure dd { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; overflow-wrap: anywhere; }
+.key-figure .key-sub { font-size: 13px; line-height: 18px; font-weight: 400; color: var(--fg-muted); }
+.key-primary { grid-column: 1 / -1; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.key-primary dd { font-size: 32px; line-height: 40px; letter-spacing: -0.01em; }
+.rail-secondary { margin: 0; font-size: 14px; }
+.rail-secondary dd { font-size: 14px; font-weight: 500; }
