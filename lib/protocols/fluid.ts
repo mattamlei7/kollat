@@ -1,4 +1,4 @@
-import { erc20Abi, formatUnits, type Address } from "viem";
+import { BaseError, ContractFunctionRevertedError, erc20Abi, formatUnits, type Address } from "viem";
 import { WNATIVE } from "../balances";
 import { getClient } from "../chains";
 import { aprToApy, liquidationPriceSingle, uniformDrawdown } from "../math/health";
@@ -20,9 +20,15 @@ async function readVaults(chainId: ChainId, vaults: readonly Address[]) {
   const client = getClient(chainId);
   const chunks: Address[][] = [];
   for (let i = 0; i < vaults.length; i += CHUNK) chunks.push(vaults.slice(i, i + CHUNK));
-  const parts = await Promise.all(
-    chunks.map((c) => client.readContract({ address: FLUID_VAULT_RESOLVER, abi: FLUID_VAULT_RESOLVER_ABI, functionName: "getVaultsEntireData", args: [c] })),
-  );
+  const read = (vs: readonly Address[]) => client.readContract({ address: FLUID_VAULT_RESOLVER, abi: FLUID_VAULT_RESOLVER_ABI, functionName: "getVaultsEntireData", args: [vs] });
+  const reverted = (e: unknown) => e instanceof BaseError && e.walk((x) => x instanceof ContractFunctionRevertedError) instanceof ContractFunctionRevertedError;
+  // A few vaults make the resolver revert (5 on mainnet, 2026-10-17), which would sink their whole chunk.
+  // Retry that chunk vault by vault and drop only the ones that revert; RPC failures still throw.
+  const parts = await Promise.all(chunks.map((c) => read(c).catch(async (e) => {
+    if (!reverted(e)) throw e;
+    const one = await Promise.all(c.map((v) => read([v]).catch((e) => { if (reverted(e)) return []; throw e; })));
+    return one.flat();
+  })));
   return parts.flat();
 }
 
